@@ -5,7 +5,7 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## User Documentation
 
-[User Documentationo](https://eeditiones.github.io/tuttle-doc/)
+[User Documentation](https://eeditiones.github.io/tuttle-doc/)
 
 ## Functionality
 
