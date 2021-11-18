@@ -1,0 +1,31 @@
+{
+    "servers": {
+        "localhost": {
+            "server": "http://localhost:8080/exist",
+            "user": "admin",
+            "password": "",
+            "root": "/db/apps/tuttle"
+        }
+    },
+    "sync": {
+        "server": "localhost",
+        "ignore": [
+            ".existdb.json",
+            ".git/**",
+            "node_modules/**",
+            "bower_components/**",
+            "package*.json",
+            ".vscode/**"
+        ]
+    },
+    "package": {
+        "author": "Dom&Jörn",
+        "target": "tuttle",
+        "description": "tuttle - github integration.",
+        "namespace": "http://exist-db.org/apps/tuttle",
+        "website": "http://exist-db.org/apps/tuttle",
+        "status": "dev",
+        "title": "tuttle - github integration",
+        "license": "GPLv3"
+    }
+}

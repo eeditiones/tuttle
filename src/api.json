@@ -1,0 +1,738 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0-pre-2",
+        "title": "Tuttle API",
+        "description": "API for Tuttle Git integration"
+    },
+    "servers": [
+        {
+            "description": "Endpoint for testing on localhost",
+            "url": "http://localhost:8080/exist/apps/tuttle"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "basicAuth": {
+                "type": "http",
+                "scheme": "basic"
+            },
+            "cookieAuth": {
+                "type": "apiKey",
+                "name": "teipublisher.com.login",
+                "in": "cookie"
+            }
+        }
+    },
+    "paths": {
+        "/git/{collection}": {
+            "get": {
+                "summary": "Fetch git repo to staging collection",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:git-pull",
+                "parameters": [
+                    {
+                        "name": "hash",
+                        "in": "query",
+                        "required": false,
+                        "schema":{
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Deploy repo to final collection",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:git-deploy",
+                "parameters": [
+                    {
+                        "name": "pre-install",
+                        "description": "Run pre install function",
+                        "in": "query",
+                        "schema":{
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "hash":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/": {
+            "get": {
+                "summary": "Fetch git repo to staging collection",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:git-pull",
+                "parameters": [
+                    {
+                        "name": "hash",
+                        "in": "query",
+                        "required": false,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Deploy repo to final collection",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:git-deploy",
+                "parameters": [
+                    {
+                        "name": "pre-install",
+                        "description": "Run pre install function",
+                        "in": "query",
+                        "schema":{
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "hash":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/incremental": {
+            "post": {
+                "summary": "Trigger incremental update",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:incremental",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties" : {
+                                        "sha" : {
+                                            "type" : "string"
+                                        },
+                                        "message" : {
+                                            "type" : "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/incremental": {
+            "post": {
+                "summary": "Trigger incremental update",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:incremental",
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties" : {
+                                        "sha" : {
+                                            "type" : "string"
+                                        },
+                                        "message" : {
+                                            "type" : "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/hash":{
+            "get": {
+                "summary": "Get remote and local hash",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:get-hash",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GIT Hash",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "remote-hash":{
+                                            "type": "string"
+                                        },
+                                        "local-hash":{
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "local-staging-hash":{
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/hash":{
+            "get": {
+                "summary": "Get remote and local hash",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:get-hash",
+                "responses": {
+                    "200": {
+                        "description": "GIT Hash",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "remote-hash":{
+                                            "type": "string"
+                                        },
+                                        "local-hash":{
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "local-staging-hash":{
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/commits":{
+            "get": {
+                "summary": "Get commits",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:get-commit",
+                "parameters": [
+                    {
+                        "name": "count",
+                        "in": "query",
+                        "required": false,
+                        "schema":{
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GIT commits",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/commits":{
+            "get": {
+                "summary": "Get commits",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:get-commit",
+                "parameters": [
+                    {
+                        "name": "count",
+                        "in": "query",
+                        "required": false,
+                        "schema":{
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GIT commits",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/hook": {
+            "post": {
+                "summary": "Trigger incremental update via Gitlab/Github",
+                "operationId": "api:hook",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/hook": {
+            "post": {
+                "summary": "Trigger incremental update via Gitlab/Github",
+                "operationId": "api:hook",
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/apikey":{
+            "get": {
+                "summary": "Generate API-Webhook-Keys",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:api-keygen",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "APIKey",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "APIKey":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/apikey":{
+            "get": {
+                "summary": "Generate API-Webhook-Keys",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:api-keygen",
+                "responses": {
+                    "200": {
+                        "description": "APIKey",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "APIKey":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+           "/git/status":{
+            "get": {
+                "summary": "Get Tuttle configuration",
+                "x-constraints": {
+                    "user": "admin"
+                },
+                "operationId": "api:get-status",
+                "responses": {
+                    "200": {
+                        "description": "GIT status",
+                        "content": {
+                            "application/xml":{
+                            	"schema": {
+                                    "type": "object",
+                                    "xml" : {
+                                    	"name" : "tuttle"
+                                    },
+                                    "properties": {
+                                        "default":{
+                                            "type": "string"
+                                        },
+                                        "repos":{
+                                            "type": "object",
+                                            "properties": {
+                                            	"repo": {
+                                            		"type": "array",
+                                            		"items": {
+                                            			"type": "object",
+	                                            		"properties": {
+                                            				"type": {
+                                            					"type": "string"
+                                            				},
+                                            				"url": {
+                                            					"type": "string"
+                                        					},
+                                        				 	"ref": {
+                                            					"type": "string"
+                                            				},
+                                        				   	"collection": {
+                                        		   				"type": "string"
+                                        				   	},
+															"status": {
+                                        				 		"type": "string"
+                                    					   	},
+                                                            "message": {
+                                                                "type": "string"
+                                                            }
+														} 
+                                            		}
+												}
+											}
+                        	            }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "default":{
+                                            "type": "string"
+                                        },
+                                        "repos":{
+                                            "type": "object",
+                                            "properties": {
+                                            	"repo": {
+                                            		"type": "array",
+                                            		"items": {
+                                            			"type": "object",
+	                                            		"properties": {
+                                            				"type": {
+                                            					"type": "string"
+                                            				},
+                                            				"url": {
+                                            					"type": "string"
+                                        					},
+                                        				 	"ref": {
+                                            					"type": "string"
+                                            				},
+                                        				   	"collection": {
+                                        		   				"type": "string"
+                                                            },
+															"status": {
+                                        				 		"type": "string"
+                                    					   	},
+                                                            "message": {
+                                                                "type": "string"
+                                                            }
+														} 
+                                            		}
+												}
+											}
+                        	            }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/{collection}/lockfile": {
+            "post": {
+                "summary": "Remove Lockfile",
+                "operationId": "api:lock-remove",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Print Lockfile",
+                "operationId": "api:lock-print",
+                "parameters": [
+                    {
+                        "name": "collection",
+                        "in":  "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/git/lockfile": {
+            "post": {
+                "summary": "Remove Lockfile",
+                "operationId": "api:lock-remove",
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Print Lockfile",
+                "operationId": "api:lock-print",
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "cookieAuth": []
+        },
+        {
+            "basicAuth": []
+        }
+    ]
+}

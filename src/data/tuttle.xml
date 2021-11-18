@@ -1,0 +1,7 @@
+<tuttle>
+  <default>sample-collection-github</default>
+  <repos>
+    <repo type="github" url="https://github.com/Jinntec/tuttle-demo" ref="master" collection="sample-collection-github"/>
+    <repo type="gitlab" url="https://gitlab.com/tuttle-test/tuttle-demo.git" ref="master" collection="sample-collection-gitlab"/>
+  </repos>
+</tuttle>
