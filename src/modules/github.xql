@@ -24,7 +24,6 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
                     "message" : concat($config?vcs, " error: ", github:request($url, $config?token)[1]/xs:string(@message))
                     } )
             else (
-                if (github:available-sha($config, $sha)) then (
                     let $request := github:request($url, $config?token)
                     let $filter := app:unzip-filter#3
                     let $unzip-action := app:unzip-store#4
@@ -35,18 +34,13 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
                             xmldb:remove($collection)
                         else ()
                     let $create-collection := xmldb:create-collection("/", $collection)
-                    let $wirte-sha := app:write-sha($collection,$sha)
+                let $write-sha := app:write-sha($collection, github:get-lastcommit-sha($config)?sha)
+
                     let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                     return  map {
                             "message" : "Success"
                     }
                 )
-                else (
-                    map {
-                        "message" : "REF not exist"
-                    }
-                )
-            )
         }
         catch * {
             map {
@@ -102,7 +96,7 @@ declare function github:get-commits($config as map(*), $count as xs:int) {
  : Get all commits in full sha lenght
  :)
 declare function github:get-commits-fullsha($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits?sha=" || $config?refss
+    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits?sha=" || $config?ref
     let $request :=
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     

@@ -22,7 +22,6 @@ declare function gitlab:clone($config as map(*), $collection as xs:string, $sha 
                     "message" : concat($config?vcs, " error: ", gitlab:request($url, $config?token)[1]/xs:string(@message))
                     } )
             else (
-                if (gitlab:available-sha($config, $sha)) then (
                     let $request := gitlab:request($url, $config?token)
                     let $filter := app:unzip-filter#3
                     let $unzip-action := app:unzip-store#4
@@ -33,16 +32,11 @@ declare function gitlab:clone($config as map(*), $collection as xs:string, $sha 
                             xmldb:remove($collection)
                         else ()
                     let $create-collection := xmldb:create-collection("/", $collection)
-                    let $wirte-sha := app:write-sha($collection,$sha)
+                    let $write-sha := app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
                     let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                     return  map {
                             "message" : "Success"
                     }
-                ) 
-                else (
-                    map {
-                        "message" : "REF not exist"
-                    } 
                 )
             )
         }

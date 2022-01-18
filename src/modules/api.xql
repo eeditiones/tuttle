@@ -196,9 +196,16 @@ declare function api:git-deploy($request as map(*)) {
     return
         if (exists($config))  then (
             try {
-                if (xmldb:collection-available($collection-staging)) then (
-                    if (xmldb:collection-available($collection-staging-uri)) then (
-                        if (not(exists(doc($lockfile)))) then (
+                if (not(xmldb:collection-available($collection-destination))) then (
+                    map { "message" : "Destination collection '" || $collection-destination || "' does not exist" }
+                )
+                else if (not(xmldb:collection-available($collection-staging-uri))) then (
+                    map { "message" : "Staging collection '" || $collection-staging || "' does not exist" }
+                )
+                else if (exists(doc($lockfile))) then (
+                    map { "message" : doc($lockfile)/task/value/text() || " in progress" }
+                )
+                else (
                             let $write-lock := app:lock-write($collection-destination, "deploy")
                             let $pre-install := if ($request?parameters?pre-install) then
                                                     config:pre-install($collection-destination,$collection-staging-uri)
@@ -214,20 +221,6 @@ declare function api:git-deploy($request as map(*)) {
                                 map {
                                     "sha" : app:production-sha($git-collection),
                                     "message" : "success"
-                                })
-                        else
-                            let $message := doc($lockfile)/task/value/text() || " in progress"
-                            return
-                                map { "message" : $message}
-                    )
-                    else (
-                        map { "message" : "staging collction not exist"
-                        }
-                    )
-                )
-                else (
-                    map { 
-                        "message" : "Destination collection not exist"
                     }
                 )
             }
