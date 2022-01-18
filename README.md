@@ -22,9 +22,8 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Current restrictions
 
-In version 1.0.0-pre-2  not implemented:
+In version 1.0.0 not implemented:
 -  webhooks are not fully implemented.
--  tuttle use the default repostiory branch
 
 ## Building and Installation
 
@@ -221,7 +220,7 @@ Will be implemented in release 2.0.0
 
 ## Honorable mentions:
 
-![Horace Parnell Tuttle](resources/images/HPTuttle-1866.png)
+![Horace Parnell Tuttle](sr/resources/images/HPTuttle-1866.png)
 
 [Horace Parnell Tuttle - American astronomer](http://www.klima-luft.de/steinicke/ngcic/persons/tuttle.htm)
 

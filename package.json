@@ -1,6 +1,6 @@
 {
   "name": "tuttle",
-  "version": "1.0.0-pre-2",
+  "version": "1.0.0",
   "description": "tuttle - a Git-integration for eXist-db",
   "scripts": {
     "test": "gulp install && mocha --exit",
