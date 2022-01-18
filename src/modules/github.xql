@@ -62,7 +62,7 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
  : Get the last commit
  :)
 declare function github:get-lastcommit-sha($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits/" || $config?ref   
+    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
     let $request :=
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     
@@ -75,7 +75,7 @@ declare function github:get-lastcommit-sha($config as map(*)) {
  : Get all commits
  :)
 declare function github:get-commits($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits/" || $config?ref
+    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
     let $request :=
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     
@@ -88,7 +88,7 @@ declare function github:get-commits($config as map(*)) {
  : Get N commits
  :)
 declare function github:get-commits($config as map(*), $count as xs:int) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits/" || $config?ref
+    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
     let $request :=
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     let $count-checked := if ($count > array:size($request) ) then array:size($request) else $count
@@ -102,7 +102,7 @@ declare function github:get-commits($config as map(*), $count as xs:int) {
  : Get all commits in full sha lenght
  :)
 declare function github:get-commits-fullsha($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits" 
+    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits?sha=" || $config?refss
     let $request :=
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     

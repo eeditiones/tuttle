@@ -22,7 +22,7 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Current restrictions
 
-In version 1.0.0 not implemented:
+In version 1.0.1 not implemented:
 -  webhooks are not fully implemented.
 
 ## Building and Installation
