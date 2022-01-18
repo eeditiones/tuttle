@@ -220,7 +220,7 @@ Will be implemented in release 2.0.0
 
 ## Honorable mentions:
 
-![Horace Parnell Tuttle](sr/resources/images/HPTuttle-1866.png)
+![Horace Parnell Tuttle](src/resources/images/HPTuttle-1866.png)
 
 [Horace Parnell Tuttle - American astronomer](http://www.klima-luft.de/steinicke/ngcic/persons/tuttle.htm)
 
