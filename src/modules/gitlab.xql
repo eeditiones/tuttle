@@ -91,7 +91,7 @@ declare function gitlab:get-commit-files($config as map(*), $sha as xs:string) {
  : Get the last commit
  :)
 declare function gitlab:get-lastcommit-sha($config as map(*)) {
-    let $url := $config?baseurl || "/projects/" || $config?project-id ||  "/repository/commits" 
+    let $url := $config?baseurl || "/projects/" || $config?project-id || "/repository/commits/?ref_name=" || $config?ref 
     let $request :=
         parse-json(util:base64-decode(gitlab:request($url, $config?token)[2]))
             
@@ -105,7 +105,7 @@ declare function gitlab:get-lastcommit-sha($config as map(*)) {
  : Get all commits
  :)
 declare function gitlab:get-commits($config as map(*)) {
-    let $url := $config?baseurl || "/projects/" || $config?project-id ||  "/repository/commits"  
+    let $url := $config?baseurl || "/projects/" || $config?project-id || "/repository/commits/?ref_name=" || $config?ref  
     
     return
         if (gitlab:request($url, $config?token)[1]/xs:integer(@status) ne 200) then (
@@ -125,7 +125,7 @@ declare function gitlab:get-commits($config as map(*)) {
  : Get N commits
  :)
 declare function gitlab:get-commits($config as map(*), $count as xs:int) {
-    let $url := $config?baseurl || "/projects/" || $config?project-id ||  "/repository/commits"  
+    let $url := $config?baseurl || "/projects/" || $config?project-id || "/repository/commits/?ref_name=" || $config?ref
     
     return
         if (gitlab:request($url, $config?token)[1]/xs:integer(@status) ne 200) then (
