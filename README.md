@@ -88,7 +88,7 @@ Gitserver type:  'github' or 'gitlab'
  * For github you have to spezifie the ower and the repo
  * For gitlab you have to spezifie the project-id of the repository
 
-#### ref (future use not implemented yet)
+#### ref 
 Define the working branch of the git repository
 
 #### hookuser & hookpasswd (future use not implemented yet)
