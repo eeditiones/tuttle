@@ -113,7 +113,7 @@ The page below is reachable via [api.html](api.html) in your installed tuttle ap
 
 ### API endpoint description
 
-Calling the API without {collection} ``$config:default-collection`` is chosen. 
+Calling the API without {collection} ``config:default-collection()`` is chosen. 
 
 #### Fetch to staging collection
 

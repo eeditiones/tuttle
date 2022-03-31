@@ -131,7 +131,7 @@ declare function github:available-sha($config as map(*), $sha as xs:string) as x
  : Run incremental update on collection
  :) 
 declare function github:incremental($config as map(*), $collection as xs:string){
-    let $config := $config:collections?($collection)
+    let $config := config:collections($collection)
     let $collection-path := config:prefix() || "/" || $collection
 
     return

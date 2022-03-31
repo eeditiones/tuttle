@@ -48,7 +48,7 @@ declare function app:unzip-store($path as xs:string, $data-type as xs:string, $d
  : Filter function to blacklist resources
  :)
 declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $param as item()*) as xs:boolean { 
-    let $blacklist := $config:blacklist
+    let $blacklist := config:blacklist()
     return
         if (contains($path, $blacklist)) then
             false()
@@ -111,7 +111,7 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
 declare function app:lock-write($collection as xs:string, $task as xs:string) {
     try {
         let $xml := '<task><value>'|| $task ||'</value></task>'
-        return xmldb:store($collection, $config:lock, $xml)
+        return xmldb:store($collection, config:lock(), $xml)
     }
     catch * {
         map {
@@ -128,7 +128,7 @@ declare function app:lock-write($collection as xs:string, $task as xs:string) {
  :)
 declare function app:lock-remove($collection as xs:string) {
     try {
-        xmldb:remove($collection, $config:lock)
+        xmldb:remove($collection, config:lock())
     }
     catch * {
         map {

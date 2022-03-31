@@ -205,7 +205,7 @@ declare function gitlab:get-url($config as map(*)) {
  : Run incremental update on collection
  :)
 declare function gitlab:incremental($config as map(*), $collection as xs:string){
-    let $config := $config:collections?($collection)
+    let $config := config:collections($collection)
     let $collection-path := config:prefix() || "/" || $collection
 
     return
