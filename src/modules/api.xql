@@ -29,9 +29,9 @@ declare function api:get-status($request as map(*)) {
             <repos>
             {for $collection in map:keys($config:collections)
                 let $col-config := $config:collections?($collection)
-                let $collection-path := $config:prefix || "/" || $collection
-                let $hash-staging := $config:prefix || "/" || $collection || $config:suffix || "/gitsha.xml"
-                let $hash-deploy := $config:prefix || "/" || $collection || "/gitsha.xml"
+                let $collection-path := config:prefix() || "/" || $collection
+                let $hash-staging := config:prefix() || "/" || $collection || $config:suffix || "/gitsha.xml"
+                let $hash-deploy := config:prefix() || "/" || $collection || "/gitsha.xml"
                 let $hash-git := if($col-config?vcs = "github") then github:get-lastcommit-sha($col-config)
                                     else gitlab:get-lastcommit-sha($col-config)
                 let $status := if ($hash-git?sha = "" ) then
@@ -68,8 +68,8 @@ declare function api:get-hash($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
     let $config := $config:collections?($git-collection)
-    let $collection := $config:prefix || "/" || $git-collection || "/gitsha.xml"
-    let $collection-staging := $config:prefix || "/" || $git-collection || $config:suffix || "/gitsha.xml"
+    let $collection := config:prefix() || "/" || $git-collection || "/gitsha.xml"
+    let $collection-staging := config:prefix() || "/" || $git-collection || $config:suffix || "/gitsha.xml"
 
     return
         if (exists($config))  then (
@@ -92,7 +92,7 @@ declare function api:lock-remove($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         $config:default-collection else xmldb:decode-uri($request?parameters?collection)
     let $config := $config:collections?($git-collection)
-    let $lockfile-path := $config:prefix || "/" || $git-collection
+    let $lockfile-path := config:prefix() || "/" || $git-collection
     let $lockfile := $lockfile-path || "/" || $config:lock
 
     return
@@ -120,7 +120,7 @@ declare function api:lock-print($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
     let $config := $config:collections?($git-collection)
-    let $lockfile-path := $config:prefix || "/" || $git-collection
+    let $lockfile-path := config:prefix() || "/" || $git-collection
     let $lockfile := $lockfile-path || "/" || $config:lock
 
     return
@@ -146,10 +146,10 @@ declare function api:git-pull($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
     let $config := $config:collections?($git-collection)
-    let $collection-staging := $config:prefix || "/" || $git-collection || $config:suffix
-    let $collection-staging-sha := $config:prefix || "/" || $git-collection || $config:suffix || "/gitsha.xml"
-    let $lockfile := $config:prefix || "/" || $git-collection || "/" || $config:lock
-    let $collection-destination := $config:prefix || "/" || $git-collection
+    let $collection-staging := config:prefix() || "/" || $git-collection || $config:suffix
+    let $collection-staging-sha := config:prefix() || "/" || $git-collection || $config:suffix || "/gitsha.xml"
+    let $lockfile := config:prefix() || "/" || $git-collection || "/" || $config:lock
+    let $collection-destination := config:prefix() || "/" || $git-collection
 
     return
         if (exists($config))  then (
@@ -186,8 +186,8 @@ declare function api:git-deploy($request as map(*)) {
         $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
     let $config := $config:collections?($git-collection)
     let $collection-staging := $git-collection || $config:suffix
-    let $collection-staging-uri := $config:prefix || "/" || $collection-staging 
-    let $collection-destination := $config:prefix || "/" || $git-collection
+    let $collection-staging-uri := config:prefix() || "/" || $collection-staging 
+    let $collection-destination := config:prefix() || "/" || $git-collection
     let $collection-destination-sha := $collection-destination || "/gitsha.xml"
     let $lockfile := $collection-destination || "/" || $config:lock
     
@@ -203,7 +203,7 @@ declare function api:git-deploy($request as map(*)) {
                 else (
                     let $check-lock-dst := if (xmldb:collection-available($collection-destination)) then ()
                     else (
-                        xmldb:create-collection($config:prefix, $git-collection)
+                        xmldb:create-collection(config:prefix(), $git-collection)
                     ) 
                     let $write-lock := app:lock-write($collection-destination, "deploy")
                     let $xar-list := xmldb:get-child-resources($collection-staging-uri)
@@ -278,7 +278,7 @@ declare function api:incremental($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
     let $config := $config:collections?($git-collection)
-    let $collection-path := $config:prefix || "/" || $git-collection
+    let $collection-path := config:prefix() || "/" || $git-collection
     let $lockfile := $collection-path || "/" || $config:lock
     let $collection-destination-sha := $collection-path || "/gitsha.xml"
 
@@ -374,7 +374,7 @@ declare function api:hook($request as map(*)) {
                             request:get-header("X-Gitlab-Token")
                     return
                         if ($apikey-header = $apikey) then (
-                            let $collection-path := $config:prefix || "/" || $git-collection
+                            let $collection-path := config:prefix() || "/" || $git-collection
                             let $lockfile := $collection-path || "/" || $config:lock
                             let $collection-destination-sha := $collection-path || "/gitsha.xml"
                             let $login := xmldb:login($collection-path, $config:hookuser, $config:hookpasswd)

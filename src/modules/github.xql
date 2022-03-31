@@ -132,7 +132,7 @@ declare function github:available-sha($config as map(*), $sha as xs:string) as x
  :) 
 declare function github:incremental($config as map(*), $collection as xs:string){
     let $config := $config:collections?($collection)
-    let $collection-path := $config:prefix || "/" || $collection
+    let $collection-path := config:prefix() || "/" || $collection
 
     return
     for $sha in reverse(github:get-newest-commits($config, $collection))
@@ -234,7 +234,7 @@ declare function github:check-signature($collection as xs:string, $signature as 
 declare %private function github:incremental-delete($config as map(*), $collection as xs:string, $sha as xs:string){
     for $resource in github:get-commit-files($config, $sha)?del
         let $resource-path := tokenize($resource, '[^/]+$')[1]
-        let $resource-collection := $config:prefix || "/" || $collection || "/" || $resource-path
+        let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
         let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
 
         return 
@@ -262,7 +262,7 @@ declare %private function github:incremental-delete($config as map(*), $collecti
 declare %private function github:incremental-add($config as map(*), $collection as xs:string, $sha as xs:string){
     for $resource in github:get-commit-files($config, $sha)?new
         let $resource-path := tokenize($resource, '[^/]+$')[1]
-        let $resource-collection := $config:prefix || "/" || $collection || "/" || $resource-path
+        let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
         let $resource-filename :=
             if ($resource-path= "") then
                 xmldb:encode($resource)

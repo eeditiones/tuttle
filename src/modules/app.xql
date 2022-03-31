@@ -144,7 +144,7 @@ declare function app:lock-remove($collection as xs:string) {
 : Set recursive permissions to whole collection 
 :)
 declare function app:set-permission($collection as xs:string) {
-    let $collection-uri := $config:prefix || "/" || $collection
+    let $collection-uri := config:prefix() || "/" || $collection
 
     return 
         dbutil:scan(xs:anyURI($collection-uri), function($collection-url, $resource) {
@@ -163,7 +163,7 @@ declare function app:set-permission($collection as xs:string) {
 : $type: 'collection' or 'resource'
 :)
 declare function app:set-permission($collection as xs:string, $path as xs:string, $type as xs:string) {
-    let $collection-uri := $config:prefix || "/" || $collection
+    let $collection-uri := config:prefix() || "/" || $collection
     let $repo := doc(concat($collection-uri, "/repo.xml"))/repo:meta/repo:permissions
 
     return (
@@ -189,7 +189,7 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
 : Get Sha of production collection
 :)
 declare function app:production-sha($collection as xs:string) {
-    let $gitsha := $config:prefix || "/" || $collection || "/gitsha.xml"
+    let $gitsha := config:prefix() || "/" || $collection || "/gitsha.xml"
 
     return 
         if (doc($gitsha)/hash/value/text()) then 
