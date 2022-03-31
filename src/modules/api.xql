@@ -91,7 +91,7 @@ declare function api:get-hash($request as map(*)) {
 declare function api:lock-remove($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         config:default-collection() else xmldb:decode-uri($request?parameters?collection)
-    let $config := config:collections?($git-collection)
+    let $config := config:collections($git-collection)
     let $lockfile-path := config:prefix() || "/" || $git-collection
     let $lockfile := $lockfile-path || "/" || config:lock()
 
@@ -252,7 +252,7 @@ declare function api:git-deploy($request as map(*)) {
 declare function api:get-commit($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
-    let $config := config:collections?($git-collection)
+    let $config := config:collections($git-collection)
 
     return
         if (exists($config))  then (
