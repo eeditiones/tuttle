@@ -362,7 +362,7 @@ declare function api:hook($request as map(*)) {
     
     return
         if (exists($config))  then (
-            let $apikey := doc($config:apikeys)//apikeys/collection[name = $collection]/key/text()
+            let $apikey := doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()
             return 
                 if ($apikey) then (
                     let $apikey-header := 

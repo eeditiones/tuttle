@@ -217,7 +217,7 @@ declare function github:get-url($config as map(*)) {
  : Check signature for Webhook
  :)
 declare function github:check-signature($collection as xs:string, $signature as xs:string, $payload  as xs:string) as xs:boolean {
-    let $private-key := xs:string(doc($config:apikeys)//apikeys/collection[name = $collection]/key/text())
+    let $private-key := xs:string(doc(config:apikeys())//apikeys/collection[name = $collection]/key/text())
 (:    let $expected-signature := crypto:hmac($payload, $private-key, "HmacSha256", "base64"):)
     let $expected-signature := ""
 

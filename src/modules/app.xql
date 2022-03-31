@@ -77,20 +77,20 @@ declare function app:random-key($length as xs:int) {
 };
 
 (:~ 
- : Write api key to $config:apikeys
+ : Write api key to config:apikeys()
  :)
 declare function app:write-apikey($collection as xs:string, $apikey as xs:string) {
     try {
-        let $collection-prefix := tokenize($config:apikeys, '[^/]+$')[1]
-        let $apikey-resource := xmldb:encode(replace($config:apikeys, $collection-prefix, ""))
+        let $collection-prefix := tokenize(config:apikeys(), '[^/]+$')[1]
+        let $apikey-resource := xmldb:encode(replace(config:apikeys(), $collection-prefix, ""))
         let $collection-check := 
             if (xmldb:collection-available($collection-prefix)) then () else app:mkcol($collection-prefix)
         return 
-            if (doc($config:apikeys)//apikeys/collection[name = $collection]/key/text()) then
-                update replace doc($config:apikeys)//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
-            else if (doc($config:apikeys)//apikeys) then
+            if (doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()) then
+                update replace doc(config:apikeys())//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
+            else if (doc(config:apikeys())//apikeys) then
                 let $add := <collection><name>{$collection}</name><key>{$apikey}</key></collection>
-                return update insert $add into doc($config:apikeys)//apikeys
+                return update insert $add into doc(config:apikeys())//apikeys
             else
                 let $add := <apikeys><collection><name>{$collection}</name><key>{$apikey}</key></collection></apikeys>
                 return xmldb:store($collection-prefix, $apikey-resource, $add)
