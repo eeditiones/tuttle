@@ -176,12 +176,12 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
                     sm:chmod($path, replace($repo/@mode/string(), "(..).(..).(..).", "$1x$2x$3x"))
         )
         else (
-            sm:chown($path, $config:sm?user),
-            sm:chgrp($path, $config:sm?group),
+            sm:chown($path, config:sm()?user),
+            sm:chgrp($path, config:sm()?group),
             if ($type = "resource") then
-                    sm:chmod($path, $config:sm?mode)
+                    sm:chmod($path, config:sm()?mode)
                 else
-                    sm:chmod($path, replace($config:sm?mode, "(..).(..).(..).", "$1x$2x$3x")))
+                    sm:chmod($path, replace(config:sm()?mode, "(..).(..).(..).", "$1x$2x$3x")))
         )
 };
 
