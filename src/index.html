@@ -108,7 +108,8 @@
                            serialization="none">
 
                 <fx-action event="submit-done">
-                    <fx-message>Data deployed to database</fx-message>
+                    <fx-message if="instance('response')?message = 'success'">Data deployed to database</fx-message>
+                    <fx-message if="instance('response')?message = 'no expath-pkg.xml or repo.xml in repo'">No expath-pkg.xml or repo.xml in repo</fx-message>
                     <fx-send submission="config"></fx-send>
                 </fx-action>
 
@@ -203,7 +204,7 @@
             </fx-case>
         </fx-switch>
     </fx-fore>
-    <script type="module" src="./js/fore-debug.js"></script>
+    <script type="module" src="./js/fore-all.js"></script>
 
 
 </div>

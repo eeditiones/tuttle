@@ -63,6 +63,10 @@ else if (matches($exist:resource, "\.(js)$", "s")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
     </dispatch>
 
+else if (matches($exist:resource, "\.(js.map)$", "s")) then
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+    </dispatch>
+
 else if (matches($exist:resource, "\.(png)$", "s")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
     </dispatch>

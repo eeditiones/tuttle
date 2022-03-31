@@ -22,23 +22,22 @@ declare function gitlab:clone($config as map(*), $collection as xs:string, $sha 
                     "message" : concat($config?vcs, " error: ", gitlab:request($url, $config?token)[1]/xs:string(@message))
                     } )
             else (
-                    let $request := gitlab:request($url, $config?token)
-                    let $filter := app:unzip-filter#3
-                    let $unzip-action := app:unzip-store#4
-                    let $filter-params := () 
-                    let $data-params := ($collection)         
-                    let $delete-collection :=
-                        if(xmldb:collection-available($collection)) then 
-                            xmldb:remove($collection)
-                        else ()
-                    let $create-collection := xmldb:create-collection("/", $collection)
-                    let $write-sha := app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
-                    let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
-                    return  map {
-                            "message" : "Success"
-                    }
-                )
-            )
+                let $request := gitlab:request($url, $config?token)
+                let $filter := app:unzip-filter#3
+                let $unzip-action := app:unzip-store#4
+                let $filter-params := () 
+                let $data-params := ($collection)         
+                let $delete-collection :=
+                    if(xmldb:collection-available($collection)) then 
+                        xmldb:remove($collection)
+                    else ()
+                let $create-collection := xmldb:create-collection("/", $collection)
+                let $write-sha := app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
+                let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
+                return  map {
+                        "message" : "success"
+                }
+            )   
         }
         catch * {
             map {

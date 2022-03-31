@@ -28,6 +28,7 @@ declare variable $config:collections := map {
             }
         };
 
+
 (:~
  : Defile default collection
  :)
@@ -36,7 +37,7 @@ declare variable $config:default-collection := "sample-collection-github";
 (:~
  : Blacklist - these files are not checkout from git and are ignored
  :)
-declare variable $config:blacklist := ["build.xml", "expath-pkg.xml", "repo.xml", "controller.xql", ".gitignore", "collection.xconf"];
+declare variable $config:blacklist := [".existdb.json", "build.xml", "README.md", ".gitignore", "expath-pkg.xml.tmpl", "repo.xml.tmpl", "build.properties.xml"];
 
 (:~
  : Suffix of the checked out git statging collection 
@@ -67,9 +68,3 @@ declare variable $config:sm := map {
     "mode" : "rw-r--r--"
 };
 
-(:~ 
- : Custom Pre-install function - parameter destination-collection and stating-collection as full URI
-:)
-declare function config:pre-install ($collection as xs:string, $staging as xs:string) {
-    true()
-};

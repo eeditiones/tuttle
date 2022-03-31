@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "version": "1.0.2",
+        "version": "1.1.0",
         "title": "Tuttle API",
         "description": "API for Tuttle Git integration"
     },
@@ -76,15 +76,6 @@
                 "operationId": "api:git-deploy",
                 "parameters": [
                     {
-                        "name": "pre-install",
-                        "description": "Run pre install function",
-                        "in": "query",
-                        "schema":{
-                            "type": "boolean",
-                            "default": false
-                        }
-                    },
-                    {
                         "name": "collection",
                         "in":  "path",
                         "required": true,
@@ -152,18 +143,7 @@
                 "x-constraints": {
                     "user": "admin"
                 },
-                "operationId": "api:git-deploy",
-                "parameters": [
-                    {
-                        "name": "pre-install",
-                        "description": "Run pre install function",
-                        "in": "query",
-                        "schema":{
-                            "type": "boolean",
-                            "default": false
-                        }
-                    }
-                ],
+                "operationId": "api:git-deploy",                
                 "responses": {
                     "200":{
                         "description": "JSON dump of request",
