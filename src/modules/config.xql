@@ -9,24 +9,15 @@ declare variable $config:collections := map {
             "sample-collection-github" : map {
                 "vcs" : "github",
                 "baseurl" : "https://api.github.com/",
-                "repo" : "tuttle-demo",
-                "owner" : "Jinntec",
+                "repo" : "tuttle-sample-data",
+                "owner" : "tuttle-sample-data",
                 "ref" : "master",
-                "token" : "XXX",
+                "token" : "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",
                 "hookuser" :  "admin",
                 "hookpasswd" : ""
-            },
-            "sample-collection-gitlab" : map {
-                "vcs" : "gitlab",
-                "baseurl" : "https://gitlab.com/api/v4/",
-                "project-id" : "2342555",
-                "ref" : "master",
-                "token" : "XXX",
-                "hookuser" :  "admin",
-                "hookpasswd" : ""
-
             }
         };
+
 
 (:~
  : Defile default collection
@@ -36,7 +27,7 @@ declare variable $config:default-collection := "sample-collection-github";
 (:~
  : Blacklist - these files are not checkout from git and are ignored
  :)
-declare variable $config:blacklist := ["build.xml", "expath-pkg.xml", "repo.xml", "controller.xql", ".gitignore", "collection.xconf"];
+declare variable $config:blacklist := [".existdb.json", "build.xml", "README.md", ".gitignore", "expath-pkg.xml.tmpl", "repo.xml.tmpl", "build.properties.xml"];
 
 (:~
  : Suffix of the checked out git statging collection 
@@ -67,9 +58,3 @@ declare variable $config:sm := map {
     "mode" : "rw-r--r--"
 };
 
-(:~ 
- : Custom Pre-install function - parameter destination-collection and stating-collection as full URI
-:)
-declare function config:pre-install ($collection as xs:string, $staging as xs:string) {
-    true()
-};

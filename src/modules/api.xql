@@ -7,6 +7,7 @@ import module namespace roaster="http://e-editiones.org/roaster";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
+import module namespace compression="http://exist-db.org/xquery/compression";
 
 import module namespace github="http://exist-db.org/apps/tuttle/github" at "github.xql";
 import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xql";
@@ -33,7 +34,7 @@ declare function api:get-status($request as map(*)) {
                 let $hash-deploy := $config:prefix || "/" || $collection || "/gitsha.xml"
                 let $hash-git := if($col-config?vcs = "github") then github:get-lastcommit-sha($col-config)
                                     else gitlab:get-lastcommit-sha($col-config)
-                let $status := if ($hash-git?sha = "" or not(xmldb:collection-available($collection-path)) ) then
+                let $status := if ($hash-git?sha = "" ) then
                                     "error"
                                 else if (doc($hash-deploy)/hash/value/text() = $hash-git?sha) then
                                     "uptodate"
@@ -45,11 +46,8 @@ declare function api:get-status($request as map(*)) {
                                 github:get-url($col-config) 
                             else 
                                 gitlab:get-url($col-config)
-                let $message := if($status = "error" ) then 
-                                    if (not(xmldb:collection-available($collection-path))) then
-                                        "Destination collection not exist"
-                                    else 
-                                         $url?message
+                let $message := if($status = "error" ) then
+                                    concat($col-config?vcs, " error: ", $url?message)
                                 else
                                     ""
 
@@ -196,32 +194,43 @@ declare function api:git-deploy($request as map(*)) {
     return
         if (exists($config))  then (
             try {
-                if (not(xmldb:collection-available($collection-destination))) then (
-                    map { "message" : "Destination collection '" || $collection-destination || "' does not exist" }
-                )
-                else if (not(xmldb:collection-available($collection-staging-uri))) then (
+                if (not(xmldb:collection-available($collection-staging-uri))) then (
                     map { "message" : "Staging collection '" || $collection-staging || "' does not exist" }
                 )
                 else if (exists(doc($lockfile))) then (
                     map { "message" : doc($lockfile)/task/value/text() || " in progress" }
                 )
                 else (
-                            let $write-lock := app:lock-write($collection-destination, "deploy")
-                            let $pre-install := if ($request?parameters?pre-install) then
-                                                    config:pre-install($collection-destination,$collection-staging-uri)
-                                                else false()
-                            let $cleanup-col := app:cleanup-collection($git-collection, $config:prefix)
-                            let $cleanup-res := app:cleanup-resources($git-collection, $config:prefix)
-                            let $move-col := app:move-collections($collection-staging, $git-collection, $config:prefix)
-                            let $move-res := app:move-resources($collection-staging, $git-collection, $config:prefix)
-                            let $remove-staging := xmldb:remove($collection-staging-uri)
-                            let $set-permissions := app:set-permission($git-collection)
-                            let $remove-lock := app:lock-remove($collection-destination)
+                    let $check-lock-dst := if (xmldb:collection-available($collection-destination)) then ()
+                    else (
+                        xmldb:create-collection($config:prefix, $git-collection)
+                    ) 
+                    let $write-lock := app:lock-write($collection-destination, "deploy")
+                    let $xar-list := xmldb:get-child-resources($collection-staging-uri)
+                    let $xar-check := if (not($xar-list = "expath-pkg.xml" and $xar-list = "repo.xml")) then (
+                            map {
+                                        "message" : "no expath-pkg.xml or repo.xml in repo"
+                                }
+                        )
+                        else (
+                            let $remove-pkg := if (contains(repo:list(), $git-collection)) then (
+                                let $package := doc(concat($collection-destination, "/expath-pkg.xml"))//@name/string()
+                                let $undeploy := repo:undeploy($package)
+                                return repo:remove($package) 
+                            )
+                            else ()
+                            let $xar := xmldb:store-as-binary($collection-staging-uri, "pkg.xar", 
+                                compression:zip(xs:anyURI($collection-staging-uri),true(), $collection-staging-uri))
+                            let $install := repo:install-and-deploy-from-db(concat($collection-staging-uri, "/pkg.xar"))
                             return 
                                 map {
                                     "sha" : app:production-sha($git-collection),
                                     "message" : "success"
-                    }
+                            }                            
+                        )
+                    let $remove-staging := xmldb:remove($collection-staging-uri)
+                    let $remove-lock := app:lock-remove($collection-destination)
+                    return $xar-check
                 )
             }
             catch * {
