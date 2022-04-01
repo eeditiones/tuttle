@@ -106,6 +106,7 @@ With incremental update only the changes to the database collection are applied.
 3) now you can update your collection with a click on 'incremental'
 
 **REMARK: A valid expath-pkg.xml and repo.xml must be present**
+
 **REMARK: Only use it with data collections**
 
 ## API
