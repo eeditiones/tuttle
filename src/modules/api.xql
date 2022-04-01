@@ -25,13 +25,13 @@ declare variable $api:definitions := ("api.json");
  :)
 declare function api:get-status($request as map(*)) {
         <tuttle>
-            <default>{$config:default-collection}</default>
+            <default>{config:default-collection()}</default>
             <repos>
-            {for $collection in map:keys($config:collections)
-                let $col-config := $config:collections?($collection)
-                let $collection-path := $config:prefix || "/" || $collection
-                let $hash-staging := $config:prefix || "/" || $collection || $config:suffix || "/gitsha.xml"
-                let $hash-deploy := $config:prefix || "/" || $collection || "/gitsha.xml"
+            {for $collection in config:list-collections()
+                let $col-config := config:collections($collection)
+                let $collection-path := config:prefix() || "/" || $collection
+                let $hash-staging := config:prefix() || "/" || $collection || config:suffix() || "/gitsha.xml"
+                let $hash-deploy := config:prefix() || "/" || $collection || "/gitsha.xml"
                 let $hash-git := if($col-config?vcs = "github") then github:get-lastcommit-sha($col-config)
                                     else gitlab:get-lastcommit-sha($col-config)
                 let $status := if ($hash-git?sha = "" ) then
@@ -66,10 +66,10 @@ declare function api:get-status($request as map(*)) {
  :)
 declare function api:get-hash($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
-    let $collection := $config:prefix || "/" || $git-collection || "/gitsha.xml"
-    let $collection-staging := $config:prefix || "/" || $git-collection || $config:suffix || "/gitsha.xml"
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
+    let $collection := config:prefix() || "/" || $git-collection || "/gitsha.xml"
+    let $collection-staging := config:prefix() || "/" || $git-collection || config:suffix() || "/gitsha.xml"
 
     return
         if (exists($config))  then (
@@ -90,15 +90,15 @@ declare function api:get-hash($request as map(*)) {
 :)
 declare function api:lock-remove($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection)
-    let $config := $config:collections?($git-collection)
-    let $lockfile-path := $config:prefix || "/" || $git-collection
-    let $lockfile := $lockfile-path || "/" || $config:lock
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection)
+    let $config := config:collections($git-collection)
+    let $lockfile-path := config:prefix() || "/" || $git-collection
+    let $lockfile := $lockfile-path || "/" || config:lock()
 
     return
         if (exists($config))  then (
             if (exists(doc($lockfile))) then (
-                let $remove := xmldb:remove($lockfile-path, $config:lock)
+                let $remove := xmldb:remove($lockfile-path, config:lock())
                 let $message := "lockfile removed: " || $lockfile 
                 return
                     map { "message" : $message}
@@ -118,10 +118,10 @@ declare function api:lock-remove($request as map(*)) {
 :)
 declare function api:lock-print($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
-    let $lockfile-path := $config:prefix || "/" || $git-collection
-    let $lockfile := $lockfile-path || "/" || $config:lock
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
+    let $lockfile-path := config:prefix() || "/" || $git-collection
+    let $lockfile := $lockfile-path || "/" || config:lock()
 
     return
         if (exists($config))  then (
@@ -144,12 +144,12 @@ declare function api:lock-print($request as map(*)) {
  :)
 declare function api:git-pull($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
-    let $collection-staging := $config:prefix || "/" || $git-collection || $config:suffix
-    let $collection-staging-sha := $config:prefix || "/" || $git-collection || $config:suffix || "/gitsha.xml"
-    let $lockfile := $config:prefix || "/" || $git-collection || "/" || $config:lock
-    let $collection-destination := $config:prefix || "/" || $git-collection
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
+    let $collection-staging := config:prefix() || "/" || $git-collection || config:suffix()
+    let $collection-staging-sha := config:prefix() || "/" || $git-collection || config:suffix() || "/gitsha.xml"
+    let $lockfile := config:prefix() || "/" || $git-collection || "/" || config:lock()
+    let $collection-destination := config:prefix() || "/" || $git-collection
 
     return
         if (exists($config))  then (
@@ -183,13 +183,13 @@ declare function api:git-pull($request as map(*)) {
 
 declare function api:git-deploy($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
-    let $collection-staging := $git-collection || $config:suffix
-    let $collection-staging-uri := $config:prefix || "/" || $collection-staging 
-    let $collection-destination := $config:prefix || "/" || $git-collection
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
+    let $collection-staging := $git-collection || config:suffix()
+    let $collection-staging-uri := config:prefix() || "/" || $collection-staging 
+    let $collection-destination := config:prefix() || "/" || $git-collection
     let $collection-destination-sha := $collection-destination || "/gitsha.xml"
-    let $lockfile := $collection-destination || "/" || $config:lock
+    let $lockfile := $collection-destination || "/" || config:lock()
     
     return
         if (exists($config))  then (
@@ -203,7 +203,7 @@ declare function api:git-deploy($request as map(*)) {
                 else (
                     let $check-lock-dst := if (xmldb:collection-available($collection-destination)) then ()
                     else (
-                        xmldb:create-collection($config:prefix, $git-collection)
+                        xmldb:create-collection(config:prefix(), $git-collection)
                     ) 
                     let $write-lock := app:lock-write($collection-destination, "deploy")
                     let $xar-list := xmldb:get-child-resources($collection-staging-uri)
@@ -251,8 +251,8 @@ declare function api:git-deploy($request as map(*)) {
  :)
 declare function api:get-commit($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
 
     return
         if (exists($config))  then (
@@ -276,10 +276,10 @@ declare function api:get-commit($request as map(*)) {
  :)
 declare function api:incremental($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
-    let $collection-path := $config:prefix || "/" || $git-collection
-    let $lockfile := $collection-path || "/" || $config:lock
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
+    let $collection-path := config:prefix() || "/" || $git-collection
+    let $lockfile := $collection-path || "/" || config:lock()
     let $collection-destination-sha := $collection-path || "/gitsha.xml"
 
     return
@@ -335,9 +335,9 @@ declare function api:incremental($request as map(*)) {
  : APIKey generation for webhooks
  :)
 declare function api:api-keygen($request as map(*)) {
-    let $git-collection := $config:default-collection
-    let $config := $config:collections?($git-collection)
-    let $collection := $config:default-collection
+    let $git-collection := config:default-collection()
+    let $config := config:collections($git-collection)
+    let $collection := config:default-collection()
 
     return
         if (exists($config))  then (
@@ -357,12 +357,12 @@ declare function api:api-keygen($request as map(*)) {
  :)
 declare function api:hook($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
-        $config:default-collection else xmldb:decode-uri($request?parameters?collection) 
-    let $config := $config:collections?($git-collection)
+        config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $config := config:collections($git-collection)
     
     return
         if (exists($config))  then (
-            let $apikey := doc($config:apikeys)//apikeys/collection[name = $collection]/key/text()
+            let $apikey := doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()
             return 
                 if ($apikey) then (
                     let $apikey-header := 
@@ -374,8 +374,8 @@ declare function api:hook($request as map(*)) {
                             request:get-header("X-Gitlab-Token")
                     return
                         if ($apikey-header = $apikey) then (
-                            let $collection-path := $config:prefix || "/" || $git-collection
-                            let $lockfile := $collection-path || "/" || $config:lock
+                            let $collection-path := config:prefix() || "/" || $git-collection
+                            let $lockfile := $collection-path || "/" || config:lock()
                             let $collection-destination-sha := $collection-path || "/gitsha.xml"
                             let $login := xmldb:login($collection-path, $config:hookuser, $config:hookpasswd)
 

@@ -48,7 +48,7 @@ declare function app:unzip-store($path as xs:string, $data-type as xs:string, $d
  : Filter function to blacklist resources
  :)
 declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $param as item()*) as xs:boolean { 
-    let $blacklist := $config:blacklist
+    let $blacklist := config:blacklist()
     return
         if (contains($path, $blacklist)) then
             false()
@@ -77,20 +77,20 @@ declare function app:random-key($length as xs:int) {
 };
 
 (:~ 
- : Write api key to $config:apikeys
+ : Write api key to config:apikeys()
  :)
 declare function app:write-apikey($collection as xs:string, $apikey as xs:string) {
     try {
-        let $collection-prefix := tokenize($config:apikeys, '[^/]+$')[1]
-        let $apikey-resource := xmldb:encode(replace($config:apikeys, $collection-prefix, ""))
+        let $collection-prefix := tokenize(config:apikeys(), '[^/]+$')[1]
+        let $apikey-resource := xmldb:encode(replace(config:apikeys(), $collection-prefix, ""))
         let $collection-check := 
             if (xmldb:collection-available($collection-prefix)) then () else app:mkcol($collection-prefix)
         return 
-            if (doc($config:apikeys)//apikeys/collection[name = $collection]/key/text()) then
-                update replace doc($config:apikeys)//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
-            else if (doc($config:apikeys)//apikeys) then
+            if (doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()) then
+                update replace doc(config:apikeys())//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
+            else if (doc(config:apikeys())//apikeys) then
                 let $add := <collection><name>{$collection}</name><key>{$apikey}</key></collection>
-                return update insert $add into doc($config:apikeys)//apikeys
+                return update insert $add into doc(config:apikeys())//apikeys
             else
                 let $add := <apikeys><collection><name>{$collection}</name><key>{$apikey}</key></collection></apikeys>
                 return xmldb:store($collection-prefix, $apikey-resource, $add)
@@ -111,7 +111,7 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
 declare function app:lock-write($collection as xs:string, $task as xs:string) {
     try {
         let $xml := '<task><value>'|| $task ||'</value></task>'
-        return xmldb:store($collection, $config:lock, $xml)
+        return xmldb:store($collection, config:lock(), $xml)
     }
     catch * {
         map {
@@ -128,7 +128,7 @@ declare function app:lock-write($collection as xs:string, $task as xs:string) {
  :)
 declare function app:lock-remove($collection as xs:string) {
     try {
-        xmldb:remove($collection, $config:lock)
+        xmldb:remove($collection, config:lock())
     }
     catch * {
         map {
@@ -144,7 +144,7 @@ declare function app:lock-remove($collection as xs:string) {
 : Set recursive permissions to whole collection 
 :)
 declare function app:set-permission($collection as xs:string) {
-    let $collection-uri := $config:prefix || "/" || $collection
+    let $collection-uri := config:prefix() || "/" || $collection
 
     return 
         dbutil:scan(xs:anyURI($collection-uri), function($collection-url, $resource) {
@@ -163,7 +163,7 @@ declare function app:set-permission($collection as xs:string) {
 : $type: 'collection' or 'resource'
 :)
 declare function app:set-permission($collection as xs:string, $path as xs:string, $type as xs:string) {
-    let $collection-uri := $config:prefix || "/" || $collection
+    let $collection-uri := config:prefix() || "/" || $collection
     let $repo := doc(concat($collection-uri, "/repo.xml"))/repo:meta/repo:permissions
 
     return (
@@ -176,12 +176,12 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
                     sm:chmod($path, replace($repo/@mode/string(), "(..).(..).(..).", "$1x$2x$3x"))
         )
         else (
-            sm:chown($path, $config:sm?user),
-            sm:chgrp($path, $config:sm?group),
+            sm:chown($path, config:sm()?user),
+            sm:chgrp($path, config:sm()?group),
             if ($type = "resource") then
-                    sm:chmod($path, $config:sm?mode)
+                    sm:chmod($path, config:sm()?mode)
                 else
-                    sm:chmod($path, replace($config:sm?mode, "(..).(..).(..).", "$1x$2x$3x")))
+                    sm:chmod($path, replace(config:sm()?mode, "(..).(..).(..).", "$1x$2x$3x")))
         )
 };
 
@@ -189,7 +189,7 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
 : Get Sha of production collection
 :)
 declare function app:production-sha($collection as xs:string) {
-    let $gitsha := $config:prefix || "/" || $collection || "/gitsha.xml"
+    let $gitsha := config:prefix() || "/" || $collection || "/gitsha.xml"
 
     return 
         if (doc($gitsha)/hash/value/text()) then 

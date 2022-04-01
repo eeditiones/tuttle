@@ -22,7 +22,7 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Current restrictions
 
-In version 1.1.0 not implemented:
+In version 1.1.1 not implemented:
 -  webhooks are not fully implemented.
 
 ## Building and Installation
@@ -48,35 +48,39 @@ Run tests  with ```npm test```
 
 ## Configuration
 
-Tuttle is configured in `modules/config.xqm`. 
+Tuttle is configured in `data/tuttle.xml`. 
 
 ### Gitservice configuration 
-The name of the configuration is always the destination collection.  It will be configured in `modules/config.xqm`
+@name is always the name of the destination collection.  It will be configured in `data/tuttle.xml`
 
 An example:
-```xquery
-    "sample-collection-github" : map {
-        "vcs" : "github",
-        "baseurl" : "https://api.github.com/",
-        "repo" : "tuttle-demo",
-        "owner" : "Jinntec",
-        "ref" : "master",
-        "token" : "146152be6a97a9efe9dd4647e71da8f3e4faf263",
-        "hookuser" :  "admin",
-        "hookpasswd" : ""
-    },
-    "sample-collection-gitlab" : map {
-        "vcs" : "gitlab",
-        "baseurl" : "https://gitlab.com/api/v4/",
-        "project-id" : "25852323",
-        "ref" : "master",
-        "token" : "9vq6jmzbxCMtNkobUfoM",
-        "hookuser" :  "admin",
-        "hookpasswd" : ""
-    }
+```xml
+      <repos>
+    <collection name="tuttle-sample-data">
+        <default>true</default>
+        <type>github</type>
+        <baseurl>https://api.github.com/</baseurl>
+        <repo>tuttle-sample-data</repo>
+        <owner>tuttle-sample-data</owner>
+        <token>XXX</token>
+        <ref>master</ref>
+        <hookuser>admin</hookuser>
+        <hookpasswd></hookpasswd>
+    </collection>
+    
+   <collection name="tuttle-sample-gitlab">
+        <type>gitlab</type>
+        <baseurl>https://gitlab.com/api/v4/</baseurl>
+        <project-id>tuttle-sample-data</project-id>
+        <token>XXX</token>
+        <ref>master</ref>
+        <hookuser>admin</hookuser>
+        <hookpasswd></hookpasswd>
+    </collection>
+  </repos>
 ```
 
-#### vcs
+#### type
 Gitserver type:  'github' or 'gitlab'
 
 ####  baseurl
@@ -117,7 +121,7 @@ The page below is reachable via [api.html](api.html) in your installed tuttle ap
 
 ### API endpoint description
 
-Calling the API without {collection} ``$config:default-collection`` is chosen. 
+Calling the API without {collection} ``config:default-collection()`` is chosen. 
 
 #### Fetch to staging collection
 

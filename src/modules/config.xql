@@ -3,68 +3,97 @@ xquery version "3.1";
 module namespace config="http://exist-db.org/apps/tuttle/config";
 
 (:~
+ : Configurtion file
+ :)
+declare variable $config:tuttle-config := doc("/db/apps/tuttle/data/tuttle.xml")/tuttle;
+
+(:~
  : Git configuration
  :)
-declare variable $config:collections := map {
-            "sample-collection-github" : map {
-                "vcs" : "github",
-                "baseurl" : "https://api.github.com/",
-                "repo" : "tuttle-demo",
-                "owner" : "Jinntec",
-                "ref" : "master",
-                "token" : "XXX",
-                "hookuser" :  "admin",
-                "hookpasswd" : ""
-            },
-            "sample-collection-gitlab" : map {
-                "vcs" : "gitlab",
-                "baseurl" : "https://gitlab.com/api/v4/",
-                "project-id" : "2342555",
-                "ref" : "master",
-                "token" : "XXX",
-                "hookuser" :  "admin",
-                "hookpasswd" : ""
+declare function config:collections($collection as xs:string){
+    let $config := $config:tuttle-config/repos
+    let $specific := if ($config/collection[@name = $collection]/type/string() = "github") then (
+        map {
+            "repo" : $config/collection[@name = $collection]/repo/string(),
+            "owner" : $config/collection[@name = $collection]/owner/string()
+        }
+    )
+    else (
+       map {
+            "project-id" : $config/collection[@name = $collection]/project-id/string()
+        }
+    )
 
-            }
-        };
+    return map:merge (($specific ,map {
+        "vcs" : $config/collection[@name = $collection]/type/string(),
+        "baseurl" : $config/collection[@name = $collection]/baseurl/string(),
+        "ref" : $config/collection[@name = $collection]/ref/string(),
+        "token" : $config/collection[@name = $collection]/token/string(),
+        "hookuser" :  $config/collection[@name = $collection]/hookuser/string(),
+        "hookpasswd" : $config/collection[@name = $collection]/hookpasswd/string()
+    }))
+};
+
+(:~
+ : List collection names
+ :)
+declare function config:list-collections() {
+    $config:tuttle-config/repos/collection/@name/string()
+};
 
 
 (:~
  : Defile default collection
  :)
-declare variable $config:default-collection := "sample-collection-github";
+declare function config:default-collection(){
+    $config:tuttle-config/repos/collection[default="true"]/@name/string()
+};
 
 (:~
  : Blacklist - these files are not checkout from git and are ignored
  :)
-declare variable $config:blacklist := [".existdb.json", "build.xml", "README.md", ".gitignore", "expath-pkg.xml.tmpl", "repo.xml.tmpl", "build.properties.xml"];
+declare function config:blacklist(){
+    $config:tuttle-config/blacklist/file/string()
+};
 
 (:~
  : Suffix of the checked out git statging collection 
  :)
-declare variable $config:suffix := "-stage";
+declare function config:suffix(){
+    $config:tuttle-config/config/@suffix/string()
+};
 
 (:~
  : The running task is stored in the lockfile. It ensures that two tasks do not run at the same time. 
  :)
-declare variable $config:lock := "git-lock.xml";
+declare function config:lock(){
+    $config:tuttle-config/config/@lock/string()
+};
 
 (:~
  : Prefix for collections
  :)
-declare variable $config:prefix := "/db/apps";
+declare function config:prefix(){
+    $config:tuttle-config/config/@prefix/string()
+};
 
 (:~
  : The destination where the key for the webhook is stored.
  :)
-declare variable $config:apikeys := "/db/system/auth/tuttle-token.xml" ;
+declare function config:apikeys(){
+    $config:tuttle-config/config/@apikeys/string()
+};
 
 (:~
  : DB User and Permissions as fallback if "permissions" not set in repo.xml
  :)
-declare variable $config:sm := map {
-    "user" : "nobody",
-    "group" : "nogroup",
-    "mode" : "rw-r--r--"
+declare function config:sm(){
+    let $sm := $config:tuttle-config/config/sm
+
+    return map {
+        "user" : $sm/@user/string(),
+        "group" : $sm/@group/string(),
+        "mode" : $sm/@mode/string()
+    }
 };
 

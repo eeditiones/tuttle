@@ -5,3 +5,4 @@ node_modules
 .vscode
 .DS_Store
 *.xar
+src/data/test.xml

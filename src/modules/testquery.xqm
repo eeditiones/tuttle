@@ -7,8 +7,8 @@ import module namespace config="http://exist-db.org/apps/tuttle/config" at "conf
 import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xql";
 
 
-let $git-collection := $config:default-collection
-let $config := $config:collections?($git-collection)
+let $git-collection := config:default-collection()
+let $config := config:collections($git-collection)
 let $url := $config?baseurl || "/projects/" || $config?project-id ||  "/repository/commits/" || "743dd6" ||"/diff"
 
 return $url
