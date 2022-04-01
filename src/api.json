@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "version": "1.0.2",
+        "version": "1.1.0",
         "title": "Tuttle API",
         "description": "API for Tuttle Git integration"
     },

@@ -35,7 +35,7 @@ declare function gitlab:clone($config as map(*), $collection as xs:string, $sha 
                 let $write-sha := app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
                 let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                 return  map {
-                        "message" : "Success"
+                        "message" : "success"
                 }
             )   
         }

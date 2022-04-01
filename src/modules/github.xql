@@ -38,7 +38,7 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
 
                     let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                     return  map {
-                            "message" : "Success"
+                            "message" : "success"
                     }
                 )
         }

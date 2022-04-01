@@ -41,6 +41,7 @@ declare function config:list-collections() {
     $config:tuttle-config/repos/collection/@name/string()
 };
 
+
 (:~
  : Defile default collection
  :)
