@@ -22,7 +22,7 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Current restrictions
 
-In version 1.0.2 not implemented:
+In version 1.1.0 not implemented:
 -  webhooks are not fully implemented.
 
 ## Building and Installation
@@ -96,14 +96,17 @@ tba
 ## Dashboard
 
 The dashboard can trigger a full deployment or an incremental update. 
-Full deployment clones the repository from git and overwrites the database collection.
+Full deployment clones the repository from git and install it as a xar.
 With incremental update only the changes to the database collection are applied.
 
 ### Lets start
 
-1) install xar of the data collection
+1) customize the configuration (modules/config.xql)
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
+
+**REMARK: A valid expath-pkg.xml and repo.xml must be present**
+**REMARK: Only use it with data collections**
 
 ## API
 
