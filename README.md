@@ -9,7 +9,7 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Functionality
 
-* Sync data colleciton from Git to DB
+* Sync data collection from Git to DB
 * Deal with Multi repository
 * Incremental updates
 
@@ -55,7 +55,7 @@ Tuttle is configured in `data/tuttle.xml`.
 
 An example:
 ```xml
-      <repos>
+  <repos>
     <collection name="tuttle-sample-data">
         <default>true</default>
         <type>github</type>
