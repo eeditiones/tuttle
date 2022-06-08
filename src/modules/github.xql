@@ -4,7 +4,7 @@ module namespace github="http://exist-db.org/apps/tuttle/github";
 
 import module namespace http="http://expath.org/ns/http-client";
 import module namespace compression="http://exist-db.org/xquery/compression";
-(:import module namespace crypto="http://expath.org/ns/crypto";:)
+import module namespace crypto="http://expath.org/ns/crypto";
 
 import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
 import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
@@ -218,8 +218,8 @@ declare function github:get-url($config as map(*)) {
  :)
 declare function github:check-signature($collection as xs:string, $signature as xs:string, $payload  as xs:string) as xs:boolean {
     let $private-key := xs:string(doc(config:apikeys())//apikeys/collection[name = $collection]/key/text())
-(:    let $expected-signature := crypto:hmac($payload, $private-key, "HmacSha256", "base64"):)
-    let $expected-signature := ""
+    let $expected-signature := "sha256="||crypto:hmac($payload, $private-key, "HmacSha256", "hex")
+(:    let $expected-signature := "":)
 
     return 
         if ($signature = $expected-signature) then 
