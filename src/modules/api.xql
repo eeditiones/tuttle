@@ -369,12 +369,12 @@ declare function api:hook($request as map(*)) {
     
     return
         if (exists($config))  then (
-            let $apikey := doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()
+            let $apikey := doc(config:apikeys())//apikeys/collection[name = $git-collection]/key/text()
             return 
                 if ($apikey) then (
                     let $apikey-header := 
                         if ($config?vcs = "github" ) then
-                            if (github:check-signature($git-collection, request:get-header("X-Hub-Signature"), request:get-data())) then
+                            if (github:check-signature($git-collection, request:get-header("X-Hub-Signature-256"), util:binary-to-string(request:get-data()))) then
                                 $apikey
                             else ()
                         else
@@ -384,7 +384,7 @@ declare function api:hook($request as map(*)) {
                             let $collection-path := config:prefix() || "/" || $git-collection
                             let $lockfile := $collection-path || "/" || config:lock()
                             let $collection-destination-sha := $collection-path || "/gitsha.xml"
-                            let $login := xmldb:login($collection-path, $config:hookuser, $config:hookpasswd)
+                            let $login := xmldb:login($collection-path, $config?hookuser, $config?hookpasswd)
 
                             return
                                 if (not(exists(doc($lockfile)))) then (
