@@ -150,7 +150,9 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
                 return update insert $add into doc(config:apikeys())//apikeys
             else
                 let $add := <apikeys><collection><name>{$collection}</name><key>{$apikey}</key></collection></apikeys>
-                return xmldb:store($collection-prefix, $apikey-resource, $add)
+                let $store := xmldb:store($collection-prefix, $apikey-resource, $add)
+                let $chmod := sm:chmod(config:apikeys(), "rw-r-----")
+                return $store
     }
     catch * {
         map {
