@@ -57,6 +57,63 @@ declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $
 };
 
 (:~
+ : Move staging collection to final collection
+ :)
+declare function app:move-collections($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
+    let $fullpath-collection-source :=  $prefix || "/" || $collection-source
+    let $fullpath-collection-target :=  $prefix || "/" || $collection-target
+
+    return
+        for $child in xmldb:get-child-collections($fullpath-collection-source) 
+            let $fullpath-child-source := $fullpath-collection-source || "/" || $child
+            let $fullpath-child-target := $fullpath-collection-target || "/" 
+            return 
+                xmldb:move($fullpath-child-source, $fullpath-child-target)
+};
+
+(:~
+ : Move staging collection to final collection
+ :)
+declare function app:move-resources($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
+    let $fullpath-collection-source :=  $prefix || "/" || $collection-source
+    let $fullpath-collection-target :=  $prefix || "/" || $collection-target
+    
+    return
+        for $child in xmldb:get-child-resources($fullpath-collection-source) 
+            return 
+                xmldb:move($fullpath-collection-source, $fullpath-collection-target, $child)
+};
+
+(:~ 
+ : Cleanup destination collection - delete collections from target collection
+ :)
+declare function app:cleanup-collection($collection as xs:string, $prefix as xs:string) {
+    let $blacklist := [config:blacklist(), config:lock()]
+    let $fullpath-collection :=  $prefix || "/" || $collection 
+
+    return
+        for $child in xmldb:get-child-collections($fullpath-collection)
+            where not(contains($child, $blacklist))
+                let $fullpath-child := $fullpath-collection || "/" || $child
+                return 
+                    xmldb:remove($fullpath-child)
+};
+
+(:~
+ : Cleanup destination collection - delete resources from target collection
+ :)
+declare function app:cleanup-resources($collection as xs:string, $prefix as xs:string) {
+    let $blacklist := config:blacklist()
+    let $fullpath-collection :=  $prefix || "/" || $collection 
+
+    return
+        for $child in xmldb:get-child-resources($fullpath-collection)
+            where not(contains($child, $blacklist))
+            return 
+                xmldb:remove($fullpath-collection, $child)
+};
+
+(:~
  : Random apikey generator
  :)
 declare function app:random-key($length as xs:int) {

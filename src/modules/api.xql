@@ -208,8 +208,15 @@ declare function api:git-deploy($request as map(*)) {
                     let $write-lock := app:lock-write($collection-destination, "deploy")
                     let $xar-list := xmldb:get-child-resources($collection-staging-uri)
                     let $xar-check := if (not($xar-list = "expath-pkg.xml" and $xar-list = "repo.xml")) then (
+                            let $cleanup-col := app:cleanup-collection($git-collection, config:prefix())
+                            let $cleanup-res := app:cleanup-resources($git-collection, config:prefix())
+                            let $move-col := app:move-collections($collection-staging, $git-collection, config:prefix())
+                            let $move-res := app:move-resources($collection-staging, $git-collection, config:prefix())
+                            let $set-permissions := app:set-permission($git-collection)
+                            return 
                             map {
-                                        "message" : "no expath-pkg.xml or repo.xml in repo"
+                                        "sha" : app:production-sha($git-collection),
+                                        "message" : "success"
                                 }
                         )
                         else (
