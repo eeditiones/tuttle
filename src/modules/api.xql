@@ -342,14 +342,16 @@ declare function api:incremental($request as map(*)) {
  : APIKey generation for webhooks
  :)
 declare function api:api-keygen($request as map(*)) {
-    let $git-collection := config:default-collection()
+    let $git-collection :=
+        if (not(exists($request?parameters?collection)))
+        then config:default-collection()
+        else xmldb:decode-uri($request?parameters?collection)
     let $config := config:collections($git-collection)
-    let $collection := config:default-collection()
 
     return
         if (exists($config))  then (
             let $apikey := app:random-key(42)
-            let $write-apikey := app:write-apikey($collection,  $apikey)
+            let $write-apikey := app:write-apikey($git-collection,  $apikey)
             return 
                 map {
                     "APIKey" : $apikey
