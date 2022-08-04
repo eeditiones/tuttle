@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="all" name="tuttle">
   <description>Tuttle Git integration for eXist-db</description>
-  <xmlproperty file="expath-pkg.xml"/>
+  <xmlproperty file="src/expath-pkg.xml"/>
   <property name="project.version" value="${package(version)}"/>
   <property name="project.app" value="tuttle"/>
   <property name="build.dir" value="build"/>
