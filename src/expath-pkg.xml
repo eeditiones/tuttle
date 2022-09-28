@@ -2,7 +2,7 @@
 <package 
   xmlns="http://expath.org/ns/pkg"
   name="http://e-editiones.org/tuttle"
-  abbrev="tuttle" version="1.1.2" spec="1.0">
+  abbrev="tuttle" version="1.1.3" spec="1.0">
   <title>Tuttle - Git for eXist-db</title>
   <dependency processor="http://exist-db.org" semver-min="5.3.0"/>
   <dependency package="http://e-editiones.org/roaster" semver-min="1.0.0"/>

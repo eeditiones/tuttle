@@ -17,7 +17,6 @@ Synchronizes your data collection with GitHub and GitLab.
 
 -  [node](https://nodejs.org/en/): `v12+`
 -  [exist-db](https://www.exist-db.org): `v5.3.0+` (works with Version [GITSHA: 4a8124](https://github.com/eXist-db/exist#4a8124))
--  the data xar containing the target collection must be installed prior to using Tuttle
 -  Authtoken for git repository to use
 
 ## Building and Installation
@@ -117,7 +116,9 @@ With incremental update only the changes to the database collection are applied.
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 
-**REMARK: A valid expath-pkg.xml and repo.xml must be present**
+Repositories from which a valid XAR (existing expath-pkg.xml and repo.xml) package can be generated are installed as a package, all others are created purely on the DB.
+
+**REMARK: Note that there may be index problems if a collection is not installed as a package.**
 
 **REMARK: Only use it with data collections**
 
