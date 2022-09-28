@@ -20,11 +20,6 @@ Synchronizes your data collection with GitHub and GitLab.
 -  the data xar containing the target collection must be installed prior to using Tuttle
 -  Authtoken for git repository to use
 
-## Current restrictions
-
-In version 1.1.1 not implemented:
--  webhooks are not fully implemented.
-
 ## Building and Installation
 
 Tuttle uses Gulp as its build tool which itself builds on NPM. 
@@ -94,8 +89,21 @@ Gitserver type:  'github' or 'gitlab'
 #### ref 
 Define the working branch of the git repository
 
-#### hookuser & hookpasswd (future use not implemented yet)
-tba
+#### hookuser & hookpasswd
+
+##### Create API-Keys for Github / Gitlab
+
+At this stage of development, the API keys must be generated via the API endpoint '/git/apikey' or for a specific collection '/git/{collection}/apikey'. 
+
+In the configuration "tuttle.xml" the "hookuser" is used to define the dbuser which executes the update.
+
+Example configuration for GitHub:
+ * 'Payload URL': https://existdb:8443/exist/apps/tuttle/git/hook
+ * 'Content type': application/json
+
+Example configuration for GitLab:
+ * 'URL' : https://46.23.86.66:8443/exist/apps/tuttle/git/hook
+
 
 ## Dashboard
 
