@@ -221,6 +221,21 @@ declare function gitlab:incremental($config as map(*), $collection as xs:string)
 };
 
 (:~ 
+ : Run incremental update on collection in dry mode
+ :) 
+
+declare function gitlab:incremental-dry($config as map(*), $collection as xs:string){
+    let $config := config:collections($collection)
+    let $collection-path := config:prefix() || "/" || $collection
+
+    let $changes := for $sha in reverse(gitlab:get-newest-commits($config, $collection))
+        return gitlab:get-commit-files($config, $sha)
+
+    return map:merge((map:entry('del', $changes?del), map:entry('new', $changes?new)))
+};
+
+
+(:~ 
  : Incremental updates delete files
  :)
 declare %private function gitlab:incremental-delete($config as map(*), $collection as xs:string, $sha as xs:string){

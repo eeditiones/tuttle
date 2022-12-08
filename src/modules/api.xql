@@ -284,6 +284,7 @@ declare function api:get-commit($request as map(*)) {
 declare function api:incremental($request as map(*)) {
     let $git-collection := if (not(exists($request?parameters?collection))) then  
         config:default-collection() else xmldb:decode-uri($request?parameters?collection) 
+    let $drymode := $request?parameters?dry
     let $config := config:collections($git-collection)
     let $collection-path := config:prefix() || "/" || $git-collection
     let $lockfile := $collection-path || "/" || config:lock()
@@ -294,23 +295,37 @@ declare function api:incremental($request as map(*)) {
             try {
                 if (xmldb:collection-available($collection-path)) then (
                     if (exists(doc($collection-destination-sha))) then (
-                        if (not(exists(doc($lockfile)))) then (
-                            let $write-lock := app:lock-write($collection-path, "incremental")
-                            let $incremental := 
+                        if ($drymode = false() or not(exists($drymode))) then (
+                            if (not(exists(doc($lockfile)))) then (
+                                let $write-lock := app:lock-write($collection-path, "incremental")
+                                let $incremental := 
+                                    if ($config?vcs = "github" ) then 
+                                        github:incremental($config, $git-collection)
+                                    else 
+                                        gitlab:incremental($config, $git-collection)
+                                let $remove-lock := app:lock-remove($collection-path)
+                                return 
+                                    map {
+                                        "sha" : app:production-sha($git-collection),
+                                        "message" : "success"
+                                    })
+                            else (
+                                let $message := doc($lockfile)/task/value/text() || " in progress"
+                                return
+                                    map { "message" : $message}
+                            )
+                        )
+                        else (
+                            let $incremental-dry := 
                                 if ($config?vcs = "github" ) then 
-                                    github:incremental($config, $git-collection)
-                            else 
-                                    gitlab:incremental($config, $git-collection)
-                            let $remove-lock := app:lock-remove($collection-path)
+                                    github:incremental-dry($config, $git-collection)
+                                else 
+                                    gitlab:incremental-dry($config, $git-collection)
                             return 
                                 map {
-                                    "sha" : app:production-sha($git-collection),
+                                    "changes" : $incremental-dry,
                                     "message" : "success"
-                                })
-                        else (
-                            let $message := doc($lockfile)/task/value/text() || " in progress"
-                            return
-                                map { "message" : $message}
+                                }
                         )
                     )
                     else (

@@ -146,6 +146,20 @@ declare function github:incremental($config as map(*), $collection as xs:string)
 };
 
 (:~ 
+ : Run incremental update on collection in dry mode
+ :) 
+
+declare function github:incremental-dry($config as map(*), $collection as xs:string){
+    let $config := config:collections($collection)
+    let $collection-path := config:prefix() || "/" || $collection
+
+    let $changes := for $sha in reverse(github:get-newest-commits($config, $collection))
+        return github:get-commit-files($config, $sha)
+        
+    return map:merge((map:entry('del', $changes?del), map:entry('new', $changes?new)))
+};
+
+(:~ 
  : Get files removed and added from commit 
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) {
