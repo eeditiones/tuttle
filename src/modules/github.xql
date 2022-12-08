@@ -34,8 +34,11 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
                             xmldb:remove($collection)
                         else ()
                     let $create-collection := xmldb:create-collection("/", $collection)
-                let $write-sha := app:write-sha($collection, github:get-lastcommit-sha($config)?sha)
-
+                    let $write-sha := 
+                        if(empty($sha)) then 
+                            app:write-sha($collection, github:get-lastcommit-sha($config)?sha)
+                        else
+                            app:write-sha($collection, $sha)
                     let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                     return  map {
                             "message" : "success"
