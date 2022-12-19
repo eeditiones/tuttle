@@ -5,9 +5,9 @@
         <type>github</type>
         <baseurl>https://api.github.com/</baseurl>
         <repo>tuttle-sample-data</repo>
-        <owner>tuttle-sample-data</owner>
-        <token>XXX</token>
-        <ref>master</ref>
+        <owner>eeditiones</owner>
+        <token>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</token>
+        <ref>main</ref>
         <hookuser>admin</hookuser>
         <hookpasswd></hookpasswd>
     </collection>
