@@ -35,7 +35,7 @@ describe('Github', function () {
     expect(res.data).to.deep.include({'local-hash': testHASH});
   });
 
-  describe('Github incremental update', function () {
+  describe('Incremental update', function () {
     this.timeout(10000);
 
     let newFiles = new Array();
