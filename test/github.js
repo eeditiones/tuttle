@@ -54,7 +54,7 @@ describe('Github', function () {
           newFiles.push([resource, resourceInfo.modified]);
         }));
       };
- 
+
       expect(res.status).to.equal(200);
       expect(res.data).to.deep.include({'message': 'success'});
     });
