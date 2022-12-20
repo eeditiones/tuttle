@@ -63,7 +63,7 @@ describe('Github', function () {
       this.timeout(10000);
 
       const res = await util.axios.post('git/incremental', {}, {auth: util.adminCredentials});
-
+      console.log ("DEBUG: " + JSON.stringify(res.data));
       expect(res.status).to.equal(200);
       expect(res.data).to.deep.include({'message': 'success'});
     });
