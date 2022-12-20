@@ -55,8 +55,6 @@ describe('Github', function () {
         }));
       };
 
-      console.log ("DEBUG: " + JSON.stringify(res.data));
-
       expect(res.status).to.equal(200);
       expect(res.data).to.deep.include({'message': 'success'});
     });
