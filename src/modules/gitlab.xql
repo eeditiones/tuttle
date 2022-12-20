@@ -303,9 +303,15 @@ declare %private function gitlab:incremental-add($config as map(*), $collection 
  : Gitlab request
  :)
 declare %private function gitlab:request($url as xs:string, $token as xs:string) {
-    let $request := http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
-                                        <http:header name="PRIVATE-TOKEN" value="{$token}"/>
-                                        </http:request>)
+    let $request := if (not(exists($token))) 
+        then
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            <http:header name="PRIVATE-TOKEN" value="{$token}"/>
+                            </http:request>)
+        else 
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            </http:request>)
+
     return 
         try {
             $request 
