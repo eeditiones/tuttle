@@ -313,10 +313,16 @@ declare %private function github:incremental-add($config as map(*), $collection 
  : Github request
  :)
 declare %private function github:request($url as xs:string, $token as xs:string) {
-    let $request := http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
-                                        <http:header name="Accept" value="application/vnd.github.v3+json" />
-                                        <http:header name="Authorization" value="{concat('token ',$token)}"/>
-                                        </http:request>)
+    let $request := if (not(exists($token))) 
+        then 
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            <http:header name="Accept" value="application/vnd.github.v3+json" />
+                            <http:header name="Authorization" value="{concat('token ',$token)}"/>
+                            </http:request>)
+        else
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            <http:header name="Accept" value="application/vnd.github.v3+json" />
+                            </http:request>)
 
     return try {
         $request
