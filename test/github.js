@@ -7,6 +7,13 @@ describe('Github', function () {
   
   let testHASH;
   
+  it('Remove lockfile', async function () {
+    const res = await util.axios.post('git/lockfile', {}, {auth: util.adminCredentials});
+
+    expect(res.status).to.equal(200);
+  });
+
+
   it('Get changelog', async function () {
     const res = await util.axios.get('git/commits' + testHASH, {auth: util.adminCredentials});
     testHASH = res.data[2][0];
