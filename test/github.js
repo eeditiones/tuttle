@@ -10,7 +10,7 @@ describe('Github', function () {
   it('Get changelog', async function () {
     const res = await util.axios.get('git/commits' + testHASH, {auth: util.adminCredentials});
     testHASH = res.data[2][0];
- 
+
     expect(res.status).to.equal(200);
   });
 
