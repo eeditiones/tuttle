@@ -9,7 +9,7 @@ describe('Tuttle', function () {
         await util.login()
         response = await util.axios.get('git/status', {})
     })
-
+ 
     it('Status', function () {
         expect(response.status).to.equal(200);
     })
