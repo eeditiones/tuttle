@@ -3,7 +3,7 @@ const chai = require('chai')
 const expect = chai.expect
 
 describe('Github', function () {
-  this.timeout(10000);
+  this.timeout(13000);
   
   let testHASH;
   
