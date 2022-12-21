@@ -94,9 +94,9 @@ Define the working branch of the git repository
 
 If a token is specified Tuttle authenticates against GitHub or GitLab. When a token is not defined, Tuttle assumes a public repository without any authentication.
 
-It is also possible to pass the token via an enviroment variable. The of the variable have to be  "tuttle_token_" + collection (all dashes must be replaces by underscore). Example: tuttle_token_tuttle_sample_data
+It is also possible to pass the token via an enviroment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
 
-**Be aware of the rate limits**
+Be aware of the rate limits
 * GitHub: 
   * 60 unauthenticated requests per hour
   * 5,000 authenticated requests per hour
