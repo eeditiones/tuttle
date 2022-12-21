@@ -12,6 +12,9 @@ declare variable $config:tuttle-config := doc("/db/apps/tuttle/data/tuttle.xml")
  :)
 declare function config:collections($collection as xs:string){
     let $config := $config:tuttle-config/repos
+    let $colllection-env := replace($collection, "-", "_")
+    let $token-env := concat("tuttle_token_", $colllection-env)
+
     let $specific := if ($config/collection[@name = $collection]/type/string() = "github") then (
         map {
             "repo" : $config/collection[@name = $collection]/repo/string(),
@@ -23,12 +26,14 @@ declare function config:collections($collection as xs:string){
             "project-id" : $config/collection[@name = $collection]/project-id/string()
         }
     )
-
     return map:merge (($specific ,map {
         "vcs" : $config/collection[@name = $collection]/type/string(),
         "baseurl" : $config/collection[@name = $collection]/baseurl/string(),
         "ref" : $config/collection[@name = $collection]/ref/string(),
-        "token" : $config/collection[@name = $collection]/token/string(),
+        "token" : if (environment-variable($token-env) != "") then
+                        environment-variable($token-env)
+                    else
+                        $config/collection[@name = $collection]/token/string(),
         "hookuser" :  $config/collection[@name = $collection]/hookuser/string(),
         "hookpasswd" : $config/collection[@name = $collection]/hookpasswd/string()
     }))

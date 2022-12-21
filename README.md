@@ -10,14 +10,14 @@ Synchronizes your data collection with GitHub and GitLab.
 ## Functionality
 
 * Sync data collection from Git to DB
-* Deal with Multi repository
+* Deal with multiple repositories
 * Incremental updates
+* Works with private or public repositories
 
 ## Requirements
 
 -  [node](https://nodejs.org/en/): `v12+`
 -  [exist-db](https://www.exist-db.org): `v5.3.0+` (works with Version [GITSHA: 4a8124](https://github.com/eXist-db/exist#4a8124))
--  Authtoken for git repository to use
 
 ## Building and Installation
 
@@ -56,7 +56,7 @@ An example:
         <baseurl>https://api.github.com/</baseurl>
         <repo>tuttle-sample-data</repo>
         <owner>tuttle-sample-data</owner>
-        <token>XXX</token>
+        <token></token>
         <ref>master</ref>
         <hookuser>admin</hookuser>
         <hookpasswd></hookpasswd>
@@ -89,6 +89,18 @@ Gitserver type:  'github' or 'gitlab'
 Define the working branch of the git repository
 
 #### hookuser & hookpasswd
+
+#### token
+
+If a token is specified Tuttle authenticates against GitHub or GitLab. When a token is not defined, Tuttle assumes a public repository without any authentication.
+
+It is also possible to pass the token via an enviroment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
+
+Be aware of the rate limits
+* GitHub: 
+  * 60 unauthenticated requests per hour
+  * 5,000 authenticated requests per hour
+
 
 ##### Create API-Keys for Github / Gitlab
 

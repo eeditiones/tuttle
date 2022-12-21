@@ -178,6 +178,14 @@
                         "schema":{
                             "type": "string"
                         }
+                    },
+                    {
+                        "name": "dry",
+                        "in":  "query",
+                        "required": false,
+                        "schema":{
+                            "type": "boolean"
+                        }
                     }
                 ],
                 "responses": {
@@ -209,6 +217,16 @@
                     "user": "admin"
                 },
                 "operationId": "api:incremental",
+                "parameters": [
+                    {
+                        "name": "dry",
+                        "in":  "query",
+                        "required": false,
+                        "schema":{
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200":{
                         "description": "JSON dump of request",

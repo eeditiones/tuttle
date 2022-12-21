@@ -32,7 +32,11 @@ declare function gitlab:clone($config as map(*), $collection as xs:string, $sha 
                         xmldb:remove($collection)
                     else ()
                 let $create-collection := xmldb:create-collection("/", $collection)
-                let $write-sha := app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
+                let $write-sha :=   
+                    if(empty($sha)) then 
+                        app:write-sha($collection, gitlab:get-lastcommit-sha($config)?sha)
+                    else
+                        app:write-sha($collection, $sha)
                 let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
                 return  map {
                         "message" : "success"
@@ -217,6 +221,21 @@ declare function gitlab:incremental($config as map(*), $collection as xs:string)
 };
 
 (:~ 
+ : Run incremental update on collection in dry mode
+ :) 
+
+declare function gitlab:incremental-dry($config as map(*), $collection as xs:string){
+    let $config := config:collections($collection)
+    let $collection-path := config:prefix() || "/" || $collection
+
+    let $changes := for $sha in reverse(gitlab:get-newest-commits($config, $collection))
+        return gitlab:get-commit-files($config, $sha)
+
+    return map:merge((map:entry('del', $changes?del), map:entry('new', $changes?new)))
+};
+
+
+(:~ 
  : Incremental updates delete files
  :)
 declare %private function gitlab:incremental-delete($config as map(*), $collection as xs:string, $sha as xs:string){
@@ -284,9 +303,15 @@ declare %private function gitlab:incremental-add($config as map(*), $collection 
  : Gitlab request
  :)
 declare %private function gitlab:request($url as xs:string, $token as xs:string) {
-    let $request := http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
-                                        <http:header name="PRIVATE-TOKEN" value="{$token}"/>
-                                        </http:request>)
+    let $request := if ($token != "") 
+        then
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            <http:header name="PRIVATE-TOKEN" value="{$token}"/>
+                            </http:request>)
+        else 
+            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
+                            </http:request>)
+
     return 
         try {
             $request 
