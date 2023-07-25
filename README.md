@@ -124,7 +124,7 @@ With incremental update only the changes to the database collection are applied.
 
 ### Lets start
 
-1) customize the configuration (modules/config.xql)
+1) customize the configuration (modules/config.xqm)
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 

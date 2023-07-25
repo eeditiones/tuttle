@@ -9,10 +9,10 @@ import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
 import module namespace compression="http://exist-db.org/xquery/compression";
 
-import module namespace github="http://exist-db.org/apps/tuttle/github" at "github.xql";
-import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xql";
-import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace github="http://exist-db.org/apps/tuttle/github" at "github.xqm";
+import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xqm";
+import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xqm";
+import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xqm";
 
 
 (:~

@@ -9,5 +9,5 @@
   <copyright>true</copyright>
   <type>application</type>
   <target>tuttle</target>
-  <finish>post-install.xql</finish>
+  <finish>post-install.xq</finish>
 </meta>

@@ -101,4 +101,3 @@ declare function config:sm(){
         "mode" : $sm/@mode/string()
     }
 };
-

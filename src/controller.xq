@@ -12,7 +12,7 @@ if ($exist:path eq "") then
         <redirect url="{request:get-uri()}/"/>
     </dispatch>
 
-(: forward root path to index.xql :)
+(: forward root path to index.html :)
 else if ($exist:path eq "/") then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <redirect url="index.html"/>
@@ -96,7 +96,7 @@ else if (starts-with($exist:path, '/jwt')) then
 (: all other requests are passed on the Open API router :)
 else
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <forward url="{$exist:controller}/modules/api.xql">
+        <forward url="{$exist:controller}/modules/api.xq">
             <set-header name="Access-Control-Allow-Origin" value="*"/>
             <set-header name="Access-Control-Allow-Credentials" value="true"/>
             <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
