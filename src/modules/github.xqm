@@ -6,8 +6,8 @@ import module namespace http="http://expath.org/ns/http-client";
 import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace crypto="http://expath.org/ns/crypto";
 
-import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xqm";
+import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xqm";
 
 
 

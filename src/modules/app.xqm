@@ -9,7 +9,7 @@ import module namespace repo="http://exist-db.org/xquery/repo";
 import module namespace sm="http://exist-db.org/xquery/securitymanager";
 import module namespace dbutil="http://exist-db.org/xquery/dbutil";
 
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xqm";
 
 (:~
  : Unzip helper function
