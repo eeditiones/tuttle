@@ -94,7 +94,7 @@ declare function gitlab:get-lastcommit-sha($config as map(*)) {
             
     return
         map { 
-            "sha" : substring($request?1?short_id, 1, 6)
+            "sha" : app:shorten-sha($request?1?short_id)
         }
 };
 
@@ -114,7 +114,7 @@ declare function gitlab:get-commits($config as map(*)) {
                 parse-json(util:base64-decode(gitlab:request($url, $config?token)[2]))
             for $size in 1 to array:size($request)
                 return  
-                    [substring(array:get($request, $size)?short_id, 1, 6) , array:get($request, $size)?message]
+                    [app:shorten-sha(array:get($request, $size)?short_id) , array:get($request, $size)?message]
         )
 };
 
@@ -135,7 +135,7 @@ declare function gitlab:get-commits($config as map(*), $count as xs:int) {
             let $count-checked := if ($count > array:size($request) ) then array:size($request) else $count
             for $size in 1 to $count-checked
                 return  
-                    [substring(array:get($request, $size)?short_id, 1, 6) , array:get($request, $size)?message]
+                    [app:shorten-sha(array:get($request, $size)?short_id) , array:get($request, $size)?message]
         )
 
 };
