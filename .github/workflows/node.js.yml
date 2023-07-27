@@ -3,14 +3,27 @@
 
 name: Test 
 
-on: [push, pull_request]
+on: 
+  push:
+  pull_request:
+  schedule:
+    # weekly runs mondays at 08:40 
+    - cron: "40 8 * * 1"
+    
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
-       matrix:
-         exist-version: [latest, release, 5.3.0]
+      fail-fast: false
+      matrix:
+        exist-version: [release, 5.5.1]
+        experimental: [false]
+        include:
+          - exist-version: latest
+            experimental: true
+            
     services:
       # Label used to access the service container
       exist:
@@ -19,12 +32,17 @@ jobs:
         image: existdb/existdb:${{ matrix.exist-version }}
         ports:
           - 8443:8443
+        volumes:
+          # point autodeploy to a folder without any XARs
+          - ${{ github.workspace }}/doc:/exist/autodeploy
+        options: >-
+          --health-interval 4s  
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js 14
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 18
       - run: npm ci
       - name: run tests
         run: npm test
