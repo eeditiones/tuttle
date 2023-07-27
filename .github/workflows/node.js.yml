@@ -15,7 +15,7 @@ jobs:
       # Label used to access the service container
       exist:
         env: 
-          tuttle_token_tuttle_sample_data: ${{ secrets.tuttle_token_tuttle_sample_data }} 
+          tuttle_token_tuttle_sample_data: ${{ secrets.TUTTLE_TOKEN_TUTTLE_SAMPLE_DATA }} 
         image: existdb/existdb:${{ matrix.exist-version }}
         ports:
           - 8443:8443
