@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://gitlab.existsolutions.com/e-editiones/tuttle"
+    "url": "https://github.com/eeditiones/tuttle"
   },
   "license": "GPL-3.0",
   "devDependencies": {

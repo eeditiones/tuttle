@@ -16,8 +16,9 @@ Synchronizes your data collection with GitHub and GitLab.
 
 ## Requirements
 
--  [node](https://nodejs.org/en/): `v12+`
--  [exist-db](https://www.exist-db.org): `v5.3.0+` (works with Version [GITSHA: 4a8124](https://github.com/eXist-db/exist#4a8124))
+-  [node](https://nodejs.org/en/): `v18`
+-  [gulp](https://gulpjs.com): `v4.x` (for building)
+-  [exist-db](https://www.exist-db.org): `v5.5.1+ < 7.0.0`
 
 ## Building and Installation
 
@@ -26,7 +27,7 @@ To initialize the project and load dependencies run
 
 ```npm i```
 
-> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in .existdb.json.
+> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in `.existdb.json.`
 
 | Run | Description |
 |---------|-------------|
@@ -82,8 +83,8 @@ Gitserver type:  'github' or 'gitlab'
 * For gitlab the url can also be your private gitlab server egg 'https://gitlab.existsolutions.com/api/v4/'
 
 ####  repo, owner and project-id
- * For github you have to spezifie the ower and the repo
- * For gitlab you have to spezifie the project-id of the repository
+ * For github you have to specify the owner and the repo
+ * For gitlab you have to specify the project-id of the repository
 
 #### ref 
 Define the working branch of the git repository
@@ -94,7 +95,7 @@ Define the working branch of the git repository
 
 If a token is specified Tuttle authenticates against GitHub or GitLab. When a token is not defined, Tuttle assumes a public repository without any authentication.
 
-It is also possible to pass the token via an enviroment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
+It is also possible to pass the token via an environment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
 
 Be aware of the rate limits
 * GitHub: 
@@ -104,9 +105,9 @@ Be aware of the rate limits
 
 ##### Create API-Keys for Github / Gitlab
 
-At this stage of development, the API keys must be generated via the API endpoint '/git/apikey' or for a specific collection '/git/{collection}/apikey'. 
+At this stage of development, the API keys must be generated via the API endpoint `/git/apikey` or for a specific collection `/git/{collection}/apikey`. 
 
-In the configuration "tuttle.xml" the "hookuser" is used to define the dbuser which executes the update.
+In the configuration `tuttle.xml` the "hookuser" is used to define the dbuser which executes the update.
 
 Example configuration for GitHub:
  * 'Payload URL': https://existdb:8443/exist/apps/tuttle/git/hook
@@ -119,16 +120,16 @@ Example configuration for GitLab:
 ## Dashboard
 
 The dashboard can trigger a full deployment or an incremental update. 
-Full deployment clones the repository from git and install it as a xar.
+Full deployment clones the repository from git and install it as a `.xar` file.
 With incremental update only the changes to the database collection are applied.
 
 ### Lets start
 
-1) customize the configuration (modules/config.xql)
+1) customize the configuration (`modules/config.xql`)
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 
-Repositories from which a valid XAR (existing expath-pkg.xml and repo.xml) package can be generated are installed as a package, all others are created purely on the DB.
+Repositories from which a valid XAR (existing `expath-pkg.xml` and `repo.xml`) package can be generated are installed as a package, all others are created purely on the DB.
 
 **REMARK: Note that there may be index problems if a collection is not installed as a package.**
 
@@ -223,7 +224,7 @@ States:
 
 `` POST ~/tuttle/{collection}/lockfile ``
 
-Remove lockfile after anythig goes wrong.
+Remove lockfile after anything goes wrong.
 
 #### Print Lockfile
 
