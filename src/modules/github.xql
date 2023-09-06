@@ -159,6 +159,33 @@ declare function github:incremental-dry($config as map(*), $collection as xs:str
     return map:merge((map:entry('del', $changes?del), map:entry('new', $changes?new)))
 };
 
+(:~
+ : Handle edge case where a file created in this changeset is also removed
+ : 
+ : So, in order to not fire useless and potentially harmful side-effects like
+ : triggers or indexing we filter out all of these documents as if they were
+ : never there.
+ :)
+declare function github:remove-or-ignore ($changes as map(*), $filename as xs:string) as map(*) {
+    if ($filename = $changes?new)
+    then map:put($changes, "new", $changes?new[. ne $filename]) (: filter document from new :)
+    else map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
+};
+
+declare function github:aggregate-filechanges ($changes as map(*), $next as map(*)) as map(*) {
+    switch ($next?status)
+    case "added" (: fall-through :)
+    case "modified" return
+        map:put($changes, "new", ($changes?new, $next?filename))
+    case "renamed" return
+        github:remove-or-ignore($changes, $next?previous_filename)
+        => map:put("new", ($changes?new, $next?filename))
+    case "removed" return
+        github:remove-or-ignore($changes, $next?filename)
+    default return
+        $changes
+};
+
 (:~ 
  : Get files removed and added from commit 
  :)
@@ -173,20 +200,9 @@ declare function github:get-commit-files($config as map(*), $sha as xs:string) {
         else (
             let $request :=
                 parse-json(util:base64-decode(github:request($url, $config?token)[2]))?files
-            let $changes := for $size in 1 to array:size($request) 
-                return
-                    if ($request($size)?status eq "added") then
-                        map { "new" :  $request($size)?filename}
-                    else if ($request($size)?status eq "modified") then
-                        map { "new" :  $request($size)?filename}
-                    else if ($request($size)?status eq "renamed") then
-                        map {  
-                            "del" : $request($size)?previous_filename, 
-                            "new" : $request($size)?filename}
-                    else if ($request($size)?status eq "removed" ) then
-                        map { "del" : $request($size)?filename}
-                    else ()
-            return map:merge(( (map:entry('del', $changes?del), map:entry('new', $changes?new))))
+
+            return
+                array:fold-left($request, map{}, github:aggregate-filechanges#2)
         )
 };
 
