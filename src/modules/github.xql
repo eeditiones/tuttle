@@ -64,7 +64,7 @@ declare function github:get-lastcommit-sha($config as map(*)) {
         parse-json(util:base64-decode(github:request($url, $config?token)[2]))
     
     return map {
-            "sha" : substring($request?1?sha, 1, 6)
+            "sha" : app:shorten-sha($request?1?sha)
     }
 };
 
@@ -78,7 +78,7 @@ declare function github:get-commits($config as map(*)) {
     
      for $size in 1 to array:size($request)
         return
-            [substring(array:get($request, $size)?sha, 1, 6) , array:get($request, $size)?commit?message]
+            [app:shorten-sha(array:get($request, $size)?sha) , array:get($request, $size)?commit?message]
 };
 
 (:~
@@ -92,7 +92,7 @@ declare function github:get-commits($config as map(*), $count as xs:int) {
 
      for $size in 1 to $count-checked
         return
-            [substring(array:get($request, $size)?sha, 1, 6) , array:get($request, $size)?commit?message]
+            [app:shorten-sha(array:get($request, $size)?sha) , array:get($request, $size)?commit?message]
 };
 
 (:~

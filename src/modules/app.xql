@@ -292,8 +292,18 @@ declare function app:mkcol($path) as xs:string* {
  : Write sha
  :)
 declare function app:write-sha($collection as xs:string, $git-sha as xs:string) {
-    let $filename := "gitsha.xml"
-    let $sha := '<hash><value>'|| substring($git-sha, 1, 6)  ||'</value></hash>'
-
-    return xmldb:store($collection, $filename, $sha)
+    xmldb:store($collection, "gitsha.xml",
+        <hash>
+            <value>{ app:shorten-sha($git-sha) }</value>
+        </hash>
+    )
 };
+
+(:~
+ : shorten commit hash in the same way as git does
+ : this will ensure that gitsha.xml created from external tools are recognized
+ :)
+declare function app:shorten-sha($git-sha as xs:string?) as xs:string? {
+    substring($git-sha, 1, 7)
+};
+
