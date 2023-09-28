@@ -19,7 +19,7 @@
             },
             "cookieAuth": {
                 "type": "apiKey",
-                "name": "teipublisher.com.login",
+                "name": "eeditiones.org.login",
                 "in": "cookie"
             }
         }
