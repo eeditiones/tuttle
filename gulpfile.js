@@ -18,8 +18,9 @@ const replacements = [existJSON.package, { version, license }]
 const packageUri = existJSON.package.namespace
 const serverInfo = existJSON.servers.localhost
 const target = serverInfo.root
+
 const url = new URL(existJSON.servers.localhost.server)
-console.log(url)
+// console.log(url)
 
 // FIXME read from .existdb.json
 const connectionOptions = {

@@ -5,38 +5,50 @@ module namespace config="http://exist-db.org/apps/tuttle/config";
 (:~
  : Configurtion file
  :)
-declare variable $config:tuttle-config := doc("/db/apps/tuttle/data/tuttle.xml")/tuttle;
+declare variable $config:tuttle-config as element(tuttle) := doc("/db/apps/tuttle/data/tuttle.xml")/tuttle;
 
 (:~
  : Git configuration
  :)
-declare function config:collections($collection as xs:string){
-    let $config := $config:tuttle-config/repos
-    let $colllection-env := replace($collection, "-", "_")
-    let $token-env := concat("tuttle_token_", $colllection-env)
+declare function config:collections($collection as xs:string) as map(*)? {
+    let $collection-config := $config:tuttle-config/repos/collection[@name = $collection]
 
-    let $specific := if ($config/collection[@name = $collection]/type/string() = "github") then (
-        map {
-            "repo" : $config/collection[@name = $collection]/repo/string(),
-            "owner" : $config/collection[@name = $collection]/owner/string()
+    return
+        if (empty($collection-config))
+        then (
+            (: error((), "Collection config for '" || $collection || "' not found!") :)
+        )
+        else map {
+            "repo" : $collection-config/repo/string(),
+            "owner" : $collection-config/owner/string(),
+            "project-id" : $collection-config/project-id/string(),
+            "vcs": $collection-config/type/string(),
+            "baseurl": $collection-config/baseurl/string(),
+            "ref": $collection-config/ref/string(),
+            "collection": $collection-config/@name/string(),
+            "path": config:prefix() || $collection,
+            "hookuser":  $collection-config/hookuser/string(),
+            (: be careful never to expose these :)
+            "hookpasswd": $collection-config/hookpasswd/string(),
+            "token": config:token($collection-config)
         }
-    )
-    else (
-       map {
-            "project-id" : $config/collection[@name = $collection]/project-id/string()
-        }
-    )
-    return map:merge (($specific ,map {
-        "vcs" : $config/collection[@name = $collection]/type/string(),
-        "baseurl" : $config/collection[@name = $collection]/baseurl/string(),
-        "ref" : $config/collection[@name = $collection]/ref/string(),
-        "token" : if (environment-variable($token-env) != "") then
-                        environment-variable($token-env)
-                    else
-                        $config/collection[@name = $collection]/token/string(),
-        "hookuser" :  $config/collection[@name = $collection]/hookuser/string(),
-        "hookpasswd" : $config/collection[@name = $collection]/hookpasswd/string()
-    }))
+};
+
+declare %private function config:token($collection-config as element(collection)) as xs:string? {
+    let $env-var := "tuttle_token_" || replace($collection-config/@name/string(), "-", "_")
+    let $token-env := environment-variable($env-var)
+
+    return
+        if (exists($token-env) and $token-env ne "")
+        then $token-env
+        else $collection-config/token/string()
+};
+
+(:~
+ : List collection names
+ :)
+declare function config:collection-config-available($collection as xs:string) as xs:boolean {
+    exists($config:tuttle-config/repos/collection[@name = $collection])
 };
 
 (:~

@@ -2,110 +2,105 @@ xquery version "3.1";
 
 module namespace github="http://exist-db.org/apps/tuttle/github";
 
-import module namespace http="http://expath.org/ns/http-client";
-import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace crypto="http://expath.org/ns/crypto";
 
 import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
 import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
 
+declare namespace http="http://expath.org/ns/http-client";
 
+declare function github:repo-url($config as map(*)) as xs:string {
+    $config?baseurl || string-join(
+        ("repos", $config?owner, $config?repo), "/")
+};
+
+declare function github:commit-ref-url($config as map(*)) as xs:string {
+    github:repo-url($config) || "/commits?sha=" || $config?ref
+};
 
 (:~
  : Clone defines Version repo
  :)
-declare function github:clone($config as map(*), $collection as xs:string, $sha as xs:string) {
-    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/zipball/" || $sha 
+declare function github:clone($config as map(*), $collection as xs:string, $sha as xs:string?) as map(*) {
+    try {
+        let $zip := github:request(
+            github:repo-url($config) || "/zipball/" || $sha, $config?token)
 
-    return
-        try {
-            if (github:request($url, $config?token)[1]/xs:integer(@status) ne 200) then (
-                map {
-                    "message" : concat($config?vcs, " error: ", github:request($url, $config?token)[1]/xs:string(@message))
-                    } )
-            else (
-                    let $request := github:request($url, $config?token)
-                    let $filter := app:unzip-filter#3
-                    let $unzip-action := app:unzip-store#4
-                    let $filter-params := ()
-                    let $data-params := ($collection)
-                    let $delete-collection :=
-                        if(xmldb:collection-available($collection)) then
-                            xmldb:remove($collection)
-                        else ()
-                    let $create-collection := xmldb:create-collection("/", $collection)
-                    let $write-sha := 
-                        if(empty($sha)) then 
-                            app:write-sha($collection, github:get-lastcommit-sha($config)?sha)
-                        else
-                            app:write-sha($collection, $sha)
-                    let $clone := compression:unzip ($request[2], $filter, $filter-params,  $unzip-action, $data-params)
-                    return  map {
-                            "message" : "success"
-                    }
-                )
+        let $delete-collection :=
+            if (xmldb:collection-available($collection))
+            then xmldb:remove($collection)
+            else ()
+
+        let $create-collection := xmldb:create-collection("/", $collection)
+
+        let $write-sha := app:write-sha($collection,
+            if (exists($sha)) then $sha else github:get-last-commit($config)?sha)
+        
+        let $clone := app:extract-archive($zip, $collection)
+
+        return map { "message" : "success" }
+    }
+    catch * {
+        map {
+            "message": $err:description,
+            "_error": map {
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
+            }
         }
-        catch * {
-            map {
-                        "_error": map {
-                            "code": $err:code, "description": $err:description, "value": $err:value, 
-                            "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                        }
-                    }
-        }
+    }
 };
 
 (:~
  : Get the last commit
  :)
-declare function github:get-lastcommit-sha($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
-    let $request :=
-        parse-json(util:base64-decode(github:request($url, $config?token)[2]))
-    
-    return map {
-            "sha" : app:shorten-sha($request?1?sha)
-    }
+declare function github:get-last-commit($config as map(*)) as map(*) {
+    let $url := github:commit-ref-url($config)
+    return array:head(github:request-json($url, $config?token))
 };
 
 (:~
  : Get all commits
  :)
-declare function github:get-commits($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
-    let $request :=
-        parse-json(util:base64-decode(github:request($url, $config?token)[2]))
-    
-     for $size in 1 to array:size($request)
-        return
-            [app:shorten-sha(array:get($request, $size)?sha) , array:get($request, $size)?commit?message]
+declare function github:get-commits($config as map(*)) as array(*)* {
+    github:get-commits($config, ())
 };
 
 (:~
  : Get N commits
  :)
-declare function github:get-commits($config as map(*), $count as xs:int) {
-    let $url := $config?baseurl || "/repos/" || $config?owner || "/" || $config?repo || "/commits?sha=" || $config?ref
-    let $request :=
-        parse-json(util:base64-decode(github:request($url, $config?token)[2]))
-    let $count-checked := if ($count > array:size($request) ) then array:size($request) else $count
-
-     for $size in 1 to $count-checked
-        return
-            [app:shorten-sha(array:get($request, $size)?sha) , array:get($request, $size)?commit?message]
+declare function github:get-commits($config as map(*), $count as xs:integer?) as array(*)* {
+    let $url := github:commit-ref-url($config)
+    let $json := github:request-json($url, $config?token)
+    let $commits :=
+        if (empty($json))
+        then []
+        else if (empty($count))
+        then $json
+        else if ($count > array:size($json)) (: raise error here? returns everything :)
+        then $json
+        else if ($count < 0)                 (: raise error here? returns nothing :)
+        then []
+        else array:subarray($json, 1, $count)
+    
+    return
+        array:for-each($commits, function($commit-info as map(*)) as array(*) {
+            [
+                app:shorten-sha($commit-info?sha),
+                $commit-info?commit?message
+            ]
+        })
 };
 
 (:~
  : Get all commits in full sha lenght
  :)
 declare function github:get-commits-fullsha($config as map(*)) {
-    let $url := $config?baseurl || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits?sha=" || $config?ref
-    let $request :=
-        parse-json(util:base64-decode(github:request($url, $config?token)[2]))
+    let $url := github:commit-ref-url($config)
+    let $commits := github:request-json($url, $config?token)
     
-     for $size in 1 to array:size($request)
-        return
-            array:get($request, $size)?sha
+    for $commit in $commits?*
+    return $commit?sha
 };
 
 (:~ 
@@ -113,50 +108,29 @@ declare function github:get-commits-fullsha($config as map(*)) {
  :)
 declare function github:get-newest-commits($config as map(*), $collection as xs:string) {
     let $prod-sha := app:production-sha($collection)
-    let $commits-all := github:get-commits($config)?1
-    let $commits-all-raw := github:get-commits-fullsha($config)
-    let $commits-no := (xs:int(index-of($commits-all, $prod-sha)))-1
-
-    return subsequence($commits-all-raw, 1, $commits-no)
+    let $commits-all := github:get-commits($config, 100)
+    let $how-many := index-of($commits-all?*?1, $prod-sha) - 1
+    let $asdf := github:get-commits-fullsha($config)
+    let $ss := subsequence($asdf, 1, $how-many)
+    return $ss
 };
 
 (:~
  : Check if sha exist
  :)
 declare function github:available-sha($config as map(*), $sha as xs:string) as xs:boolean {
-    if (contains($sha,github:get-commits($config))) then
-        true()
-    else
-        false()
+    $sha = github:get-commits($config)?*?1
 };
 
-(:~ 
- : Run incremental update on collection
- :) 
-declare function github:incremental($config as map(*), $collection as xs:string){
-    let $config := config:collections($collection)
-    let $collection-path := config:prefix() || "/" || $collection
+declare function github:get-changes ($collection-config as map(*)) as map(*) {
+    let $changes :=
+        for $sha in reverse(github:get-newest-commits($collection-config, $collection-config?collection))
+        return github:get-commit-files($collection-config, $sha)?*
 
-    return
-    for $sha in reverse(github:get-newest-commits($config, $collection))
-        let $del := github:incremental-delete($config, $collection, $sha)
-        let $add := github:incremental-add($config, $collection, $sha)
-        let $writesha := app:write-sha($collection-path, $sha)
-        return ($del, $add) 
-};
+    let $aggr := fold-left($changes, map{}, github:aggregate-filechanges#2)
 
-(:~ 
- : Run incremental update on collection in dry mode
- :) 
-
-declare function github:incremental-dry($config as map(*), $collection as xs:string){
-    let $config := config:collections($collection)
-    let $collection-path := config:prefix() || "/" || $collection
-
-    let $changes := for $sha in reverse(github:get-newest-commits($config, $collection))
-        return github:get-commit-files($config, $sha)
-        
-    return map:merge((map:entry('del', $changes?del), map:entry('new', $changes?new)))
+    (: aggregate file changes :)
+    return $aggr
 };
 
 (:~
@@ -187,169 +161,155 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
 };
 
 (:~ 
+ : Run incremental update on collection in dry mode
+ :) 
+declare function github:incremental-dry($config as map(*), $collection as xs:string) {
+    let $changes := github:get-changes($config)
+    return map {
+        'new': array{ $changes?new },
+        'del': array{ $changes?del }
+    }
+};
+
+(:~ 
+ : Run incremental update on collection
+ :) 
+declare function github:incremental($config as map(*), $collection as xs:string){
+    let $sha := github:get-last-commit($config)?sha
+    let $changes := github:get-changes($config)
+    let $del := github:incremental-delete($config, $collection, $changes?del)
+    let $add := github:incremental-add($config, $collection, $changes?new, $sha)
+    let $writesha := app:write-sha($config?path, $sha)
+    return ($del, $add) 
+};
+
+
+(:~
  : Get files removed and added from commit 
  :)
-declare function github:get-commit-files($config as map(*), $sha as xs:string) {
-    let $url := $config?baseurl  || "/repos/" || $config?owner ||  "/" || $config?repo || "/commits/"  || $sha
+declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
+    let $url := github:repo-url($config) || "/commits/"  || $sha
+    let $filechanges := github:request-json($url, $config?token)?files
 
     return
-        if (github:request($url, $config?token)[1]/xs:integer(@status) ne 200) then (
-            map {
-                "message" : concat($config?vcs, " error: ", github:request($url, $config?token)[1]/xs:string(@message))
-            } )
-        else (
-            let $request :=
-                parse-json(util:base64-decode(github:request($url, $config?token)[2]))?files
-
-            return
-                array:fold-left($request, map{}, github:aggregate-filechanges#2)
-        )
+        $filechanges
 };
 
 (:~
  : Get blob of a file
  :)
 declare function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
-    let $file := escape-html-uri($filename)
-    let $url-blob := 
-        $config?baseurl ||  "/repos/" || $config?owner ||  "/" || $config?repo || "/contents/" || $file || "?ref=" || $sha
-    let $request := github:request($url-blob, $config?token)
+    let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
+    let $json := github:request-json($blob-url, $config?token)
     
-    return 
-        if ($request[1]/xs:integer(@status) ne 200) then (
-            map {
-                "message" : concat($config?vcs, " error: ", $request[1]/xs:string(@message))
-            }
-        )
-        else (
-            let $request-blob := util:base64-decode(parse-json(util:base64-decode($request[2]))?content)
-            return $request-blob
-        )
+    return
+        util:base64-decode($json?content)
 };
 
 (:~
  : Get HTTP-URL
  :)
 declare function github:get-url($config as map(*)) {
-    let $url := 
-        $config?baseurl ||  "/repos/" || $config?owner ||  "/" || $config?repo 
-    let $request := github:request($url, $config?token)
-    
-    return 
-        if ($request[1]/xs:integer(@status) ne 200) then (
-            map {
-                "message" :  $request[1]/xs:string(@message)
-            }
-        )
-        else (
-            parse-json(util:base64-decode($request[2]))?html_url
-        )
+    let $repo-info := github:request-json(github:repo-url($config), $config?token)
+    return $repo-info?html_url
 };
 
 (:~ 
  : Check signature for Webhook
  :)
-declare function github:check-signature($collection as xs:string, $signature as xs:string, $payload  as xs:string) as xs:boolean {
-    let $private-key := xs:string(doc(config:apikeys())//apikeys/collection[name = $collection]/key/text())
-    let $expected-signature := "sha256="||crypto:hmac($payload, $private-key, "HmacSha256", "hex")
-(:    let $expected-signature := "":)
+declare function github:check-signature($collection as xs:string, $apikey as xs:string) as xs:boolean {
+    let $signature := request:get-header("X-Hub-Signature-256")
+    let $payload := util:binary-to-string(request:get-data())
+    let $private-key := doc(config:apikeys())//apikeys/collection[name = $collection]/key/string()
+    let $expected-signature := "sha256=" || crypto:hmac($payload, $private-key, "HmacSha256", "hex")
 
-    return 
-        if ($signature = $expected-signature) then 
-            true()
-        else
-            false()
+    return $signature = $expected-signature
 };
 
 (:~ 
  : Incremental updates delete files
  :)
-declare %private function github:incremental-delete($config as map(*), $collection as xs:string, $sha as xs:string){
-    for $resource in github:get-commit-files($config, $sha)?del
-        let $resource-path := tokenize($resource, '[^/]+$')[1]
-        let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
-        let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
+declare %private function github:incremental-delete($config as map(*), $collection as xs:string, $files as xs:string*){
+    for $resource in $files
+    let $resource-path := tokenize($resource, '[^/]+$')[1]
+    let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
+    let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
 
-        return 
-            try {
-                let $remove := xmldb:remove($resource-collection, $resource-filename)
-                let $remove-empty-col := 
-                    if (empty(xmldb:get-child-resources($resource-collection))) then
-                        xmldb:remove($resource-collection)
-                        else ()
-                return ()
-            }
-            catch * {
-                    map {
-                        "_error": map {
-                        "code": $err:code, "description": $err:description, "value": $err:value, 
-                        "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                    }
+    return 
+        try {
+            let $remove := xmldb:remove($resource-collection, $resource-filename)
+            let $remove-empty-col := 
+                if (empty(xmldb:get-child-resources($resource-collection))) then
+                    xmldb:remove($resource-collection)
+                    else ()
+            return ()
+        }
+        catch * {
+            map {
+                "_error": map {
+                    "code": $err:code, "description": $err:description, "value": $err:value, 
+                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
                 }
             }
+        }
 };
 
 (:~
  : Incremental update fetch and add files from git
  :)
-declare %private function github:incremental-add($config as map(*), $collection as xs:string, $sha as xs:string){
-    for $resource in github:get-commit-files($config, $sha)?new
-        let $resource-path := tokenize($resource, '[^/]+$')[1]
-        let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
-        let $resource-filename :=
-            if ($resource-path= "") then
-                xmldb:encode($resource)
-            else
-                xmldb:encode(replace($resource, $resource-path, ""))
-        let $resource-fullpath := $resource-collection || $resource-filename
+declare %private function github:incremental-add($config as map(*), $collection as xs:string, $files as xs:string*, $sha as xs:string){
+    for $resource in $files
+    let $resource-path := tokenize($resource, '[^/]+$')[1]
+    let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
+    let $resource-filename :=
+        if ($resource-path = "") then
+            xmldb:encode($resource)
+        else
+            xmldb:encode(replace($resource, $resource-path, ""))
 
-        return 
-            try {
-                let $data := github:get-blob($config, $resource, $sha)
-                let $collection-check := 
-                    if (xmldb:collection-available($resource-collection)) then ()
-                        else (
-                            app:mkcol($resource-collection),
-                            app:set-permission($collection, $resource-collection, "collection"))
-                let $store := xmldb:store($resource-collection, $resource-filename, $data)
-                let $chmod := app:set-permission($collection, $resource-fullpath, "resource")
-                return ()
-            }
-            catch * {
-                    map {
-                        "_error": map {
-                        "code": $err:code, "description": $err:description, "value": $err:value, 
-                        "line": $err:line-number, "column": $err:column-number, "module": $err:module, "sha": $sha, "resource": $resource
-                    }
+    let $resource-fullpath := $resource-collection || $resource-filename
+
+    return 
+        try {
+            let $data := github:get-blob($config, $resource, $sha)
+            let $collection-check := 
+                if (xmldb:collection-available($resource-collection)) then ()
+                    else (
+                        app:mkcol($resource-collection),
+                        app:set-permission($collection, $resource-collection, "collection"))
+            let $store := xmldb:store($resource-collection, $resource-filename, $data)
+            let $chmod := app:set-permission($collection, $resource-fullpath, "resource")
+            return ()
+        }
+        catch * {
+            map {
+                "_error": map {
+                    "code": $err:code, "description": $err:description, "value": $err:value, 
+                    "line": $err:line-number, "column": $err:column-number, "module": $err:module, "sha": $sha, "resource": $resource
                 }
             }
+        }
 };
 
 (:~
  : Github request
  :)
-declare %private function github:request($url as xs:string, $token as xs:string) {
-    let $request := if ($token != "") 
-        then 
-            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
-                            <http:header name="Accept" value="application/vnd.github.v3+json" />
-                            <http:header name="Authorization" value="{concat('token ',$token)}"/>
-                            </http:request>)
-        else
-            http:send-request(<http:request http-version="1.1" href="{xs:anyURI($url)}" method="get">
-                            <http:header name="Accept" value="application/vnd.github.v3+json" />
-                            </http:request>)
 
-    return try {
-        $request
-    }
-    catch * {
-        map {
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            },
-            "_request": $request?status
+declare %private function github:request-json($url as xs:string, $token as xs:string?) {
+    app:request-json(github:build-request($url, $token))
+};
+
+declare %private function github:request($url as xs:string, $token as xs:string?) {
+    app:request(github:build-request($url, $token))
+};
+
+declare %private function github:build-request($url as xs:string, $token as xs:string?) as element(http:request) {
+    <http:request http-version="1.1" href="{$url}" method="get">
+        <http:header name="Accept" value="application/vnd.github.v3+json" />
+        {
+            if (empty($token) or $token = "")
+            then ()
+            else <http:header name="Authorization" value="token {$token}"/>
         }
-    }
+    </http:request>
 };

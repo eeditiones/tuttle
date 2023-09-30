@@ -7,11 +7,11 @@
         <repo>tuttle-sample-data</repo>
         <owner>eeditiones</owner>
         <token>XXX</token>
-        <ref>next</ref>
+        <ref>nonexistent</ref>
         <hookuser>admin</hookuser>
         <hookpasswd></hookpasswd>
     </collection>
-    
+
    <collection name="tuttle-sample-gitlab">
         <type>gitlab</type>
         <baseurl>https://gitlab.com/api/v4/</baseurl>
@@ -22,7 +22,7 @@
         <hookpasswd></hookpasswd>
     </collection>
   </repos>
-  
+
   <blacklist>
       <file>existdb.json</file>
       <file>build.xml</file>
@@ -32,8 +32,7 @@
       <file>repo.xml.tmpl</file>
       <file>build.properties.xml</file>
   </blacklist>
-  
-  
+
   <config prefix="/db/apps/" suffix="-stage" lock="git-lock.xml" apikeys="/db/system/auth/tuttle-token.xml">
     <sm user="nobody" group="nogroup" mode="rw-r--r--"/>
   </config>
