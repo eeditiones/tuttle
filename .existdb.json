@@ -1,7 +1,7 @@
 {
     "servers": {
         "localhost": {
-            "server": "http://localhost:8080/exist",
+            "server": "https://localhost:8443/exist",
             "user": "admin",
             "password": "",
             "root": "/db/apps/tuttle"
