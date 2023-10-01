@@ -19,7 +19,7 @@ const packageUri = existJSON.package.namespace
 const serverInfo = existJSON.servers.localhost
 const target = serverInfo.root
 
-const url = new URL(existJSON.servers.localhost.server)
+const url = new URL(serverInfo.server)
 // console.log(url)
 
 // FIXME read from .existdb.json
