@@ -26,7 +26,7 @@ const url = new URL(existJSON.servers.localhost.server)
 const connectionOptions = {
     host: url.hostname,
     port: url.port,
-    secure: url.protocol === 'https://',
+    secure: url.protocol === 'https:',
     basic_auth: {
         user: serverInfo.user,
         pass: serverInfo.password
