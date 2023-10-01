@@ -346,7 +346,7 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
 };
 
 (:~ 
- : Trigger icremental update
+ : Trigger incremental update
  :)
 declare function api:incremental($request as map(*)) as map(*) {
     try {
