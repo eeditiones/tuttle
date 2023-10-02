@@ -10,12 +10,23 @@ import module namespace config="http://exist-db.org/apps/tuttle/config" at "conf
 declare namespace http="http://expath.org/ns/http-client";
 
 declare function github:repo-url($config as map(*)) as xs:string {
-    $config?baseurl || string-join(
-        ("repos", $config?owner, $config?repo), "/")
+    ``[`{$config?baseurl}`repos/`{$config?owner}`/`{$config?repo}`]``
 };
 
+(:
+  The `commits` API endpoint is _paged_ and will only return _30_ commits by default
+  it is possible to add the parameter `&per_page=100` (100 being the maximum)
+  But this will _always_ return 100 commits, which might result in to much overhead
+  and still might not be enough.
+
+  Pagination: https://docs.github.com/en/rest/guides/using-pagination-in-the-rest-api?apiVersion=2022-11-28
+ :)
 declare function github:commit-ref-url($config as map(*)) as xs:string {
     github:repo-url($config) || "/commits?sha=" || $config?ref
+};
+
+declare function github:commit-ref-url($config as map(*), $per-page as xs:integer) as xs:string {
+    github:commit-ref-url($config) || "&amp;per_page=" || $per-page
 };
 
 (:~
@@ -55,68 +66,74 @@ declare function github:clone($config as map(*), $collection as xs:string, $sha 
  : Get the last commit
  :)
 declare function github:get-last-commit($config as map(*)) as map(*) {
-    let $url := github:commit-ref-url($config)
-    return array:head(github:request-json($url, $config?token))
+    array:head(
+        github:request-json(
+            github:commit-ref-url($config, 1), $config?token))
 };
 
 (:~
  : Get all commits
  :)
 declare function github:get-commits($config as map(*)) as array(*)* {
-    github:get-commits($config, ())
+    github:get-commits($config, 100)
 };
 
 (:~
  : Get N commits
  :)
-declare function github:get-commits($config as map(*), $count as xs:integer?) as array(*)* {
-    let $url := github:commit-ref-url($config)
-    let $json := github:request-json($url, $config?token)
-    let $commits :=
-        if (empty($json))
-        then []
-        else if (empty($count))
-        then $json
-        else if ($count > array:size($json)) (: raise error here? returns everything :)
-        then $json
-        else if ($count < 0)                 (: raise error here? returns nothing :)
-        then []
-        else array:subarray($json, 1, $count)
-    
-    return
-        array:for-each($commits, function($commit-info as map(*)) as array(*) {
-            [
-                app:shorten-sha($commit-info?sha),
-                $commit-info?commit?message
-            ]
-        })
+declare function github:get-commits($config as map(*), $count as xs:integer) as array(*)* {
+    if ($count <= 0)
+    then error(xs:QName("github:illegal-argument"), "$count must be greater than zero in github:get-commits")
+    else
+        let $json := github:get-raw-commits($config, $count)
+        let $commits :=
+            if (empty($json))
+            then []
+            else if ($count >= array:size($json)) (: return everything :)
+            then $json
+            else array:subarray($json, 1, $count)
+        
+        return
+            array:for-each($commits, github:short-commit-info#1)
+};
+
+declare %private function github:short-commit-info ($commit-info as map(*)) as array(*) {
+    [
+        app:shorten-sha($commit-info?sha),
+        $commit-info?commit?message
+    ]
+};
+
+declare %private function github:only-commit-shas ($commit-info as map(*)) as array(*) {
+    [
+        app:shorten-sha($commit-info?sha),
+        $commit-info?sha
+    ]
 };
 
 (:~
- : Get all commits in full sha lenght
+ : Get commits in full
  :)
-declare function github:get-commits-fullsha($config as map(*)) {
-    let $url := github:commit-ref-url($config)
-    let $commits := github:request-json($url, $config?token)
-    
-    for $commit in $commits?*
-    return $commit?sha
+declare function github:get-raw-commits($config as map(*), $count as xs:integer) as array(*)? {
+    github:request-json(
+        github:commit-ref-url($config, $count), $config?token)
 };
 
 (:~ 
  : Get diff between production collection and github-newest
  :)
-declare function github:get-newest-commits($config as map(*), $collection as xs:string) {
-    let $prod-sha := app:production-sha($collection)
-    let $commits-all := github:get-commits($config, 100)
-    let $how-many := index-of($commits-all?*?1, $prod-sha) - 1
-    let $asdf := github:get-commits-fullsha($config)
-    let $ss := subsequence($asdf, 1, $how-many)
-    return $ss
+declare function github:get-newest-commits($config as map(*)) as xs:string* {
+    let $deployed := $config?deployed
+    let $commits := github:get-raw-commits($config, 100)
+    let $shas := array:for-each($commits, github:only-commit-shas#1)?*
+    let $how-many := index-of($shas?1, $deployed) - 1
+    return reverse(subsequence($shas?2, 1, $how-many))
 };
 
 (:~
  : Check if sha exist
+ : TODO: github API might offer a better way to check not only if the commit exists
+ :       but also if this commit is part of `ref`
  :)
 declare function github:available-sha($config as map(*), $sha as xs:string) as xs:boolean {
     $sha = github:get-commits($config)?*?1
@@ -124,13 +141,12 @@ declare function github:available-sha($config as map(*), $sha as xs:string) as x
 
 declare function github:get-changes ($collection-config as map(*)) as map(*) {
     let $changes :=
-        for $sha in reverse(github:get-newest-commits($collection-config, $collection-config?collection))
+        for $sha in github:get-newest-commits($collection-config)
         return github:get-commit-files($collection-config, $sha)?*
 
-    let $aggr := fold-left($changes, map{}, github:aggregate-filechanges#2)
-
     (: aggregate file changes :)
-    return $aggr
+    return fold-left($changes, map{}, github:aggregate-filechanges#2)
+
 };
 
 (:~
@@ -163,7 +179,7 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
 (:~ 
  : Run incremental update on collection in dry mode
  :) 
-declare function github:incremental-dry($config as map(*), $collection as xs:string) {
+declare function github:incremental-dry($config as map(*)) {
     let $changes := github:get-changes($config)
     return map {
         'new': array{ $changes?new },
@@ -174,11 +190,11 @@ declare function github:incremental-dry($config as map(*), $collection as xs:str
 (:~ 
  : Run incremental update on collection
  :) 
-declare function github:incremental($config as map(*), $collection as xs:string){
+declare function github:incremental($config as map(*)) {
     let $sha := github:get-last-commit($config)?sha
     let $changes := github:get-changes($config)
-    let $del := github:incremental-delete($config, $collection, $changes?del)
-    let $add := github:incremental-add($config, $collection, $changes?new, $sha)
+    let $del := github:incremental-delete($config, $changes?del)
+    let $add := github:incremental-add($config, $changes?new, $sha)
     let $writesha := app:write-sha($config?path, $sha)
     return ($del, $add) 
 };
@@ -189,10 +205,9 @@ declare function github:incremental($config as map(*), $collection as xs:string)
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     let $url := github:repo-url($config) || "/commits/"  || $sha
-    let $filechanges := github:request-json($url, $config?token)?files
+    let $commit := github:request-json($url, $config?token)
 
-    return
-        $filechanges
+    return $commit?files
 };
 
 (:~
@@ -229,13 +244,13 @@ declare function github:check-signature($collection as xs:string, $apikey as xs:
 (:~ 
  : Incremental updates delete files
  :)
-declare %private function github:incremental-delete($config as map(*), $collection as xs:string, $files as xs:string*){
+declare %private function github:incremental-delete($config as map(*), $files as xs:string*) {
     for $resource in $files
     let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
+    let $resource-collection := $config?path || "/" || $resource-path
     let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
 
-    return 
+    return
         try {
             let $remove := xmldb:remove($resource-collection, $resource-filename)
             let $remove-empty-col := 
@@ -246,10 +261,9 @@ declare %private function github:incremental-delete($config as map(*), $collecti
         }
         catch * {
             map {
-                "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                }
+                "resource": $resource,
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
 };
@@ -257,10 +271,10 @@ declare %private function github:incremental-delete($config as map(*), $collecti
 (:~
  : Incremental update fetch and add files from git
  :)
-declare %private function github:incremental-add($config as map(*), $collection as xs:string, $files as xs:string*, $sha as xs:string){
+declare %private function github:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) {
     for $resource in $files
     let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := config:prefix() || "/" || $collection || "/" || $resource-path
+    let $resource-collection := $config?path || "/" || $resource-path
     let $resource-filename :=
         if ($resource-path = "") then
             xmldb:encode($resource)
@@ -274,19 +288,19 @@ declare %private function github:incremental-add($config as map(*), $collection 
             let $data := github:get-blob($config, $resource, $sha)
             let $collection-check := 
                 if (xmldb:collection-available($resource-collection)) then ()
-                    else (
-                        app:mkcol($resource-collection),
-                        app:set-permission($collection, $resource-collection, "collection"))
+                else (
+                    app:mkcol($resource-collection),
+                    app:set-permission($config?collection, $resource-collection, "collection")
+                )
             let $store := xmldb:store($resource-collection, $resource-filename, $data)
-            let $chmod := app:set-permission($collection, $resource-fullpath, "resource")
+            let $chmod := app:set-permission($config?collection, $resource-fullpath, "resource")
             return ()
         }
         catch * {
             map {
-                "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module, "sha": $sha, "resource": $resource
-                }
+                "resource": $resource,
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
 };
@@ -295,12 +309,25 @@ declare %private function github:incremental-add($config as map(*), $collection 
  : Github request
  :)
 
+(: If the response header `link` contains rel="next", there are commits missing. :)
+declare %private function github:has-next-page($response as element(http:response)) {
+    let $link-header := $response//http:header/@name[.="link"]
+    return contains($link-header, 'rel="next"')
+};
+
 declare %private function github:request-json($url as xs:string, $token as xs:string?) {
-    app:request-json(github:build-request($url, $token))
+    let $response := app:request-json(github:build-request($url, $token))
+
+    return (
+        if (github:has-next-page($response[1]))
+        then util:log("warn", ('Paged github request has next page! URL:', $url))
+        else (),
+        $response[2]
+    )
 };
 
 declare %private function github:request($url as xs:string, $token as xs:string?) {
-    app:request(github:build-request($url, $token))
+    app:request(github:build-request($url, $token))[2]
 };
 
 declare %private function github:build-request($url as xs:string, $token as xs:string?) as element(http:request) {

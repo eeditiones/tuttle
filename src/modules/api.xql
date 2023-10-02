@@ -42,34 +42,31 @@ declare function api:get-status($request as map(*)) {
 };
 
 declare function api:repo-xml ($info as map(*)) as element(repo) {
-    <repo type="{$info?type}" url="{$info?url}"
-        ref="{$info?ref}" collection="{$info?collection}"
-        message="{$info?message}" status="{$info?status}" />
+    element repo {
+        map:for-each($info, function ($name as xs:string, $value) as attribute() {
+            attribute { $attribute } { $value }
+        })
+    }
 };
 
 declare function api:collection-info ($collection as xs:string) as map(*) {
     let $collection-config := api:get-collection-config($collection)
-    let $actions := vcs:get-actions($collection-config?vcs)
-    let $deployed-commit-hash := doc($collection-config?path || "/gitsha.xml")/hash/value/string()
-    let $info := map {
-        'deployed': $deployed-commit-hash,
-        'type': $collection-config?vcs,
-        'ref': $collection-config?ref,
-        'collection': $collection-config?collection
-    }
+    (: hide passwords and tokens :)
+    let $masked := map:remove($collection-config, ("hookpasswd", "token"))
 
     return
         try {
+            let $actions := vcs:get-actions($collection-config?type)
             let $url := $actions?get-url($collection-config)
             let $last-remote-commit := $actions?get-last-commit($collection-config)
             let $remote-short-sha := app:shorten-sha($last-remote-commit?sha)
 
             let $status :=
-                if ($last-remote-commit?sha = "")
+                if ($remote-short-sha = "")
                 then "error"
-                else if (empty($deployed-commit-hash))
+                else if (empty($collection-config?deployed))
                 then "new"
-                else if ($deployed-commit-hash = $remote-short-sha)
+                else if ($collection-config?deployed = $remote-short-sha)
                 then "uptodate"
                 else "behind"
 
@@ -78,7 +75,7 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
                 then "no commit on remote"
                 else "remote found"
 
-            return map:merge(( $info, map {
+            return map:merge(( $masked, map {
                 'url': $url,
                 'remote': $remote-short-sha,
                 'message': $message,
@@ -86,7 +83,7 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
             }))
         }
         catch * {
-            map:merge(( $info, map {
+            map:merge(( $masked, map {
                 'message': $err:description,
                 'status': 'error'
             }))
@@ -99,14 +96,14 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
 declare function api:get-hash($request as map(*)) as map(*) {
     try {
         let $collection-config := api:get-collection-config($request?parameters?collection)
-        let $actions := vcs:get-actions($collection-config?vcs)
+        let $actions := vcs:get-actions($collection-config?type)
         let $collection-staging := $collection-config?path || config:suffix() || "/gitsha.xml"
 
         let $last-remote-commit := $actions?get-last-commit($collection-config)
 
         return map {
             "remote-hash": $last-remote-commit?sha,
-            "local-hash": app:production-sha($collection-config?collection),
+            "local-hash": $collection-config?deployed,
             "local-staging-hash": doc($collection-staging)/hash/value/text()
         }
     }
@@ -172,7 +169,7 @@ declare function api:git-pull($request as map(*)) {
                 map { "message" : doc($lockfile)/task/value/text() || " in progress" }
             )
             else (
-                let $actions := vcs:get-actions($config?vcs)
+                let $actions := vcs:get-actions($config?type)
                 let $write-lock := app:lock-write($collection-destination, "git-pull")
                 let $commit :=
                     if ($request?parameters?hash) then (
@@ -206,7 +203,7 @@ declare function api:git-pull-default($request as map(*)) {
                 map { "message" : doc($lockfile)/task/value/text() || " in progress" }
             )
             else (
-                let $actions := vcs:get-actions($config?vcs)
+                let $actions := vcs:get-actions($config?type)
                 let $write-lock := app:lock-write($collection-destination, "git-pull")
                 let $commit :=
                     if ($request?parameters?hash)
@@ -261,8 +258,8 @@ declare function api:git-deploy($request as map(*)) {
                         let $set-permissions := app:set-permission($config?collection)
                         return
                             map {
-                                "sha" : app:production-sha($config?collection),
-                                "message" : "success"
+                                "sha": config:deployed-sha($config?path),
+                                "message": "success"
                             }
                     )
                     else (
@@ -285,8 +282,8 @@ declare function api:git-deploy($request as map(*)) {
                         let $install := repo:install-and-deploy-from-db(concat($collection-staging-uri, "/pkg.xar"))
                         return 
                             map {
-                                "sha" : app:production-sha($config?collection),
-                                "message" : "success"
+                                "sha": config:deployed-sha($config?path),
+                                "message": "success"
                             }
                     )
                 let $remove-staging := xmldb:remove($collection-staging-uri)
@@ -309,9 +306,11 @@ declare function api:git-deploy($request as map(*)) {
 declare function api:get-commits($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
-        let $actions := vcs:get-actions($config?vcs)
+        let $actions := vcs:get-actions($config?type)
 
-        return $actions?get-commits($config, $request?parameters?count)
+        return map {
+            'commits': $actions?get-commits($config, $request?parameters?count)
+        }
     }
     catch * {
         map {
@@ -329,7 +328,7 @@ declare function api:get-commits($request as map(*)) as map(*) {
 declare function api:get-commits-default($request as map(*)) as map(*) {
     try {
         let $config := api:get-default-collection-config()
-        let $actions := vcs:get-actions($config?vcs)
+        let $actions := vcs:get-actions($config?type)
 
         return map {
             'commits': $actions?get-commits($config, $request?parameters?count)
@@ -355,7 +354,7 @@ declare function api:incremental($request as map(*)) as map(*) {
         let $collection-path := $config?path
         let $lockfile := $collection-path || "/" || config:lock()
         let $collection-destination-sha := $collection-path || "/gitsha.xml"
-        let $actions := vcs:get-actions($config?vcs)
+        let $actions := vcs:get-actions($config?type)
 
         return
         if (not(xmldb:collection-available($collection-path))) then (
@@ -366,7 +365,7 @@ declare function api:incremental($request as map(*)) as map(*) {
         )
         else if (exists($drymode) and $drymode) then
             map {
-                "changes" : $actions?incremental-dry($config, $config?collection),
+                "changes" : $actions?incremental-dry($config),
                 "message" : "success"
             }
         else if (doc-available($lockfile)) then (
@@ -374,13 +373,13 @@ declare function api:incremental($request as map(*)) as map(*) {
         )
         else (
             let $write-lock := app:lock-write($collection-path, "incremental")
-            let $incremental := $actions?incremental($config, $config?collection)
+            let $incremental := $actions?incremental($config)
             let $remove-lock := app:lock-remove($collection-path)
 
             return
                 map {
-                    "sha" : app:production-sha($config?collection),
-                    "message" : "success"
+                    "sha": config:deployed-sha($config?path),
+                    "message": "success"
                 }
         )
     }
@@ -434,14 +433,14 @@ declare function api:hook($request as map(*)) {
                 let $login := xmldb:login($config?path, $config?hookuser, $config?hookpasswd)
                 let $write-lock := app:lock-write($config?path, "hook")
 
-                let $incremental := $actions?incremental($config, $config?collection)
+                let $incremental := $actions?incremental($config)
 
                 let $remove-lock := app:lock-remove($collection-path)
 
-                return 
+                return
                     map {
-                        "sha" : app:production-sha($config?collection),
-                        "message" : "success"
+                        "sha": config:deployed-sha($config?path),
+                        "message": "success"
                     }
             )
     }

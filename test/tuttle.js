@@ -4,29 +4,6 @@ const chai = require('chai')
 const expect = chai.expect
 
 describe('Tuttle', function () {
-    // {
-    //     "default": "tuttle-sample-data",
-    //     "repos": {
-    //       "repo": [
-    //         {
-    //           "type": "github",
-    //           "url": "https://github.com/eeditiones/tuttle-sample-data",
-    //           "ref": "main",
-    //           "collection": "tuttle-sample-data",
-    //           "message": "",
-    //           "status": "uptodate"
-    //         },
-    //         {
-    //           "type": "gitlab",
-    //           "url": "",
-    //           "ref": "master",
-    //           "collection": "tuttle-sample-gitlab",
-    //           "message": "gitlab error: Unauthorized",
-    //           "status": "error"
-    //         }
-    //       ]
-    //     }
-    // }
     describe('git/status', function () {
         let res, repos, defaultRepo
 
@@ -53,25 +30,40 @@ describe('Tuttle', function () {
 
         it('github sample repo is up to date', function () {
             expect(repos[0]).to.deep.equal({
-                type: "github",
-                url: "https://github.com/eeditiones/tuttle-sample-data",
-                ref: "next",
+                baseurl: "https://api.github.com/",
                 collection: "tuttle-sample-data",
-                message: "remote found",
                 deployed: "5006b2c",
+                hookuser: "admin",
+                message: "remote found",
+                owner: "eeditiones",
+                path: "/db/apps/tuttle-sample-data",
+                "project-id": null,
+                ref: "next",
                 remote: "5006b2c",
-                status: "uptodate"
+                repo: "tuttle-sample-data",
+                status: "uptodate",
+                url: "https://github.com/eeditiones/tuttle-sample-data",
+                type: "github"
             });
         });
 
         it('gitlab sample repo is not authorized', function () {
             expect(repos[1]).to.deep.equal({
-                type: "gitlab",
-                ref: "master",
+                baseurl: "https://gitlab.com/api/v4/",
                 collection: "tuttle-sample-gitlab",
-                message: "server connection failed: Unauthorized (401)",
-                status: "error",
-                deployed: null
+                deployed: "d80c71f",
+                hookuser: "admin",
+                message: "remote found",
+                owner: "line-o",
+                path: "/db/apps/tuttle-sample-gitlab",
+                "project-id": "50872175",
+                ref: "main",
+                remote: "d80c71f",
+                repo: "tuttle-sample-data",
+                status: "uptodate",
+                type: "gitlab",
+                url: "https://gitlab.com/line-o/tuttle-sample-data.git",
+                type: "gitlab"
             });
         });
     });
@@ -92,23 +84,21 @@ describe('Tuttle', function () {
     });
 
     describe('git/status with different settings', function () {
-        let res, repos, defaultRepo
+        let res, repos
 
         before(async function () {
             const buffer = await readFile('./test/fixtures/alt-tuttle.xml')
             await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml')
             res = await axios.get('git/status', { auth });
             repos = res.data.repos
-            defaultRepo = res.data.default
         });
 
         it('returns status 200', function () {
             expect(res.status).to.equal(200);
         });
 
-        it('has a default repo', function () {
-            expect(defaultRepo).to.exist;
-            expect(defaultRepo).to.equal('tuttle-sample-data');
+        it('has no default repo', function () {
+            expect(res.data.default).not.to.exist;
         });
 
         it('lists repos', function () {
@@ -116,14 +106,20 @@ describe('Tuttle', function () {
             expect(repos.length).to.be.greaterThan(0);
         });
 
-        it('ref "next" cannot be found in github sample repo ', function () {
+        it('ref "nonexistent" cannot be found in github sample repo ', function () {
             expect(repos[0]).to.deep.equal({
-                type: 'github',
-                deployed: '5006b2c',
-                ref: 'nonexistent',
+                baseurl: "https://api.github.com/",
                 collection: "tuttle-sample-data",
+                deployed: "5006b2c",
+                hookuser: "admin",
                 message: "server connection failed: Not Found (404)",
-                status: "error"
+                owner: "eeditiones",
+                path: "/db/apps/tuttle-sample-data",
+                "project-id": null,
+                ref: "nonexistent",
+                repo: "tuttle-sample-data",
+                status: "error",
+                type: "github"
             });
         });
     });

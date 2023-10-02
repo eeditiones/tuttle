@@ -2,37 +2,38 @@ const { axios, auth, getResourceInfo } = require('./util.js')
 const chai = require('chai')
 const expect = chai.expect
 
-describe('Github', function () {
-  this.timeout(30000);
+describe('Gitlab', function () {
+  this.timeout(10000);
   
   let testHASH = '79789e5';
 
   it('Remove lockfile', async function () {
-    const res = await axios.post('git/lockfile', {}, { auth });
+    const res = await axios.post('git/tuttle-sample-gitlab/lockfile', {}, { auth });
     expect(res.status).to.equal(200);
   });
 
   it('Get changelog', async function () {
-    const res = await axios.get('git/commits', { auth });
+    const res = await axios.get('git/tuttle-sample-gitlab/commits', { auth });
     expect(res.status).to.equal(200);
+    // console.log(res.data)
     expect(res.data.commits.length).to.be.greaterThan(2);
   });
 
   it('Pull ' + testHASH + ' into staging collection', async function () {
-    const res = await axios.get('git/?hash=' + testHASH, { auth });
+    const res = await axios.get('git/tuttle-sample-gitlab?hash=' + testHASH, { auth });
 
     expect(res.status).to.equal(200);
     expect(res.data).to.deep.equal({'message': 'success'});
   });
 
   it('Deploy staging to target collection', async function () {
-    const res = await axios.post('git/', {}, { auth });
+    const res = await axios.post('git/tuttle-sample-gitlab', {}, { auth });
     expect(res.status).to.equal(200);
     expect(res.data).to.deep.include({'message': 'success'});
   });
 
   it('Check Hashes', async function () {
-    const res = await axios.get('git/hash', { auth });
+    const res = await axios.get('git/tuttle-sample-gitlab/hash', { auth });
 
     expect(res.status).to.equal(200);
     expect(res.data).to.deep.include({ 'local-hash': testHASH });
@@ -47,9 +48,10 @@ describe('Github', function () {
 
       before(async function () {
         this.timeout(10000);
-        dryRunResponse = await axios.post('git/incremental?dry=true', {}, { auth });
+        dryRunResponse = await axios.post('git/tuttle-sample-gitlab/incremental?dry=true', {}, { auth });
 
-        // console.log('message', dryRunResponse.data.message)
+        console.log('message', dryRunResponse.data.message)
+        
         // console.log('files to delete', delFiles)
         // console.log('files to fetch', newFiles)
       })
@@ -61,7 +63,7 @@ describe('Github', function () {
 
       it('Returns a list of new resources', async function () {
         newFiles = await Promise.all(dryRunResponse.data.changes.new.map(async (resource) => {
-          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-data/" + resource);
+          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource);
           return [resource, resourceInfo.modified];
         }))
 
@@ -87,7 +89,7 @@ describe('Github', function () {
       let incrementalUpdateResponse
       before(async function () {
         this.timeout(10000);
-        incrementalUpdateResponse = await axios.post('git/incremental', {}, { auth });
+        incrementalUpdateResponse = await axios.post('git/tuttle-sample-gitlab/incremental', {}, { auth });
       })
 
       it('succeeds', function () {
@@ -97,7 +99,7 @@ describe('Github', function () {
 
       it('updates all changed resources', async function () {
         await Promise.all(newFiles.map(async (resource) => {
-          const { modified } = await getResourceInfo("/db/apps/tuttle-sample-data/" + resource[0]);
+          const { modified } = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource[0]);
           expect(modified).to.not.be.undefined;
           expect(modified).to.not.equal(resource[1]);
         }))
@@ -105,7 +107,7 @@ describe('Github', function () {
 
       it('deletes all deleted resources', async function () {
         await Promise.all(delFiles.map(async (resource) => {
-          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-data/" + resource);
+          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource);
           expect(resourceInfo).is.empty;
         }))
       })

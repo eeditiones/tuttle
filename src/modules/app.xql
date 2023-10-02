@@ -241,21 +241,6 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
 };
 
 (:~
-: Get Sha of production collection
-:)
-declare function app:production-sha($collection as xs:string) {
-    let $gitsha := config:prefix() || "/" || $collection || "/gitsha.xml"
-
-    return 
-        if (doc($gitsha)/hash/value/text()) then 
-            doc($gitsha)/hash/value/text()
-        else
-            map { 
-                "message" : concat($gitsha, " not exist")
-            }
-};
-
-(:~
  : Helper function of unzip:mkcol() 
 :)
 declare function app:mkcol-recursive($collection, $components) as xs:string* {
@@ -307,23 +292,24 @@ declare function app:shorten-sha($git-sha as xs:string?) as xs:string? {
 
 declare function app:request-json($request as element(http:request)) {
     let $raw := app:request($request)
-    let $decoded := util:base64-decode($raw)
+    let $decoded := util:base64-decode($raw[2])
     let $json := parse-json($decoded)
     
-    return $json
+    return ($raw[1], $json)
 };
 
 (:~
  : Github request
  :)
 declare function app:request($request as element(http:request)) {
+    (: let $_ := util:log("info", $request/@href) :)
     let $response := http:send-request($request)
     let $status-code := xs:integer($response[1]/@status)
 
     return
         if ($status-code >= 400)
         then error(xs:QName("app:connection-error"), "server connection failed: " || $response[1]/@message || " (" || $status-code || ")", $response[1])
-        else $response[2]
+        else $response
 };
 
 declare function app:extract-archive($zip, $collection as xs:string) {

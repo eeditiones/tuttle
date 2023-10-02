@@ -12,8 +12,8 @@ declare variable $vcs:mappings as map(*) := map {
         "get-last-commit": github:get-last-commit#1,
         "get-commits": github:get-commits#2,
         "get-all-commits": github:get-commits#1,
-        "incremental-dry": github:incremental-dry#2,
-        "incremental": github:incremental#2,
+        "incremental-dry": github:incremental-dry#1,
+        "incremental": github:incremental#1,
         "check-signature": github:check-signature#2
     },
     "gitlab": map {
@@ -22,8 +22,8 @@ declare variable $vcs:mappings as map(*) := map {
         "get-last-commit": gitlab:get-last-commit#1,
         "get-commits": gitlab:get-commits#2,
         "get-all-commits": gitlab:get-commits#1,
-        "incremental-dry": gitlab:incremental-dry#2,
-        "incremental": gitlab:incremental#2,
+        "incremental-dry": gitlab:incremental-dry#1,
+        "incremental": gitlab:incremental#1,
         "check-signature": gitlab:check-signature#2
     }
 };
