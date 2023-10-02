@@ -19,13 +19,13 @@
         ]
     },
     "package": {
-        "author": "Dom&Jörn",
+        "author": "TEI-publisher project team",
         "target": "tuttle",
-        "description": "tuttle - github integration.",
-        "namespace": "http://exist-db.org/apps/tuttle",
-        "website": "http://exist-db.org/apps/tuttle",
+        "description": "Synchronize data with git services",
+        "namespace": "http://e-editiones.org/tuttle",
+        "website": "https://github.com/eeditiones/tuttle",
         "status": "dev",
-        "title": "tuttle - github integration",
+        "title": "tuttle - pull data from git APIs",
         "license": "GPLv3"
     }
 }

@@ -1,8 +1,8 @@
 
-module namespace vcs="http://exist-db.org/apps/tuttle/vcs";
+module namespace vcs="http://e-editiones.org/tuttle/vcs";
 
-import module namespace github="http://exist-db.org/apps/tuttle/github" at "github.xql";
-import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xql";
+import module namespace github="http://e-editiones.org/tuttle/github" at "github.xql";
+import module namespace gitlab="http://e-editiones.org/tuttle/gitlab" at "gitlab.xql";
 
 
 declare variable $vcs:mappings as map(*) := map {

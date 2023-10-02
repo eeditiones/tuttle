@@ -9,9 +9,9 @@ import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
 import module namespace compression="http://exist-db.org/xquery/compression";
 
-import module namespace vcs="http://exist-db.org/apps/tuttle/vcs" at "vcs.xqm";
-import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace vcs="http://e-editiones.org/tuttle/vcs" at "vcs.xqm";
+import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
 
 
 (:~

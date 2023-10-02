@@ -1,6 +1,6 @@
 xquery version "3.1";
 
-module namespace app="http://exist-db.org/apps/tuttle/app";
+module namespace app="http://e-editiones.org/tuttle/app";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
@@ -10,7 +10,7 @@ import module namespace repo="http://exist-db.org/xquery/repo";
 import module namespace sm="http://exist-db.org/xquery/securitymanager";
 import module namespace dbutil="http://exist-db.org/xquery/dbutil";
 
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
 
 (:~
  : Unzip helper function

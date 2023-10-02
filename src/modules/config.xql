@@ -1,6 +1,6 @@
 xquery version "3.1";
 
-module namespace config="http://exist-db.org/apps/tuttle/config";
+module namespace config="http://e-editiones.org/tuttle/config";
 
 (:~
  : Configurtion file
