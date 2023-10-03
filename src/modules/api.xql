@@ -44,7 +44,7 @@ declare function api:get-status($request as map(*)) {
 declare function api:repo-xml ($info as map(*)) as element(repo) {
     element repo {
         map:for-each($info, function ($name as xs:string, $value) as attribute() {
-            attribute { $attribute } { $value }
+            attribute { $name } { $value }
         })
     }
 };
