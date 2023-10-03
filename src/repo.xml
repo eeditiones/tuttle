@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<meta 
-  xmlns="http://exist-db.org/xquery/repo">
+<meta xmlns="http://exist-db.org/xquery/repo">
   <description>a Git Web API integration for eXist-db</description>
   <author>TEI Publisher Project Team</author>
   <website>https://github.com/eeditiones/tuttle</website>
@@ -9,5 +8,6 @@
   <copyright>true</copyright>
   <type>application</type>
   <target>tuttle</target>
-  <finish>post-install.xql</finish>
+  <finish>finish.xq</finish>
+  <cleanup>cleanup.xq</cleanup>
 </meta>
