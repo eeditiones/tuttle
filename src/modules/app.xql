@@ -46,10 +46,10 @@ declare function app:unzip-store($path as xs:string, $data-type as xs:string, $d
 };
 
 (:~
- : Filter function to blacklist resources
+ : Filter out ignored resources
  :)
 declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $param as item()*) as xs:boolean { 
-    not(contains($path, config:blacklist()))
+    not(contains($path, config:ignore()))
 };
 
 (:~
@@ -84,12 +84,12 @@ declare function app:move-resources($collection-source as xs:string, $collection
  : Cleanup destination collection - delete collections from target collection
  :)
 declare function app:cleanup-collection($collection as xs:string, $prefix as xs:string) {
-    let $blacklist := [config:blacklist(), config:lock()]
+    let $ignore := [config:ignore(), config:lock()]
     let $fullpath-collection :=  $prefix || "/" || $collection 
 
     return
         for $child in xmldb:get-child-collections($fullpath-collection)
-            where not(contains($child, $blacklist))
+            where not(contains($child, $ignore))
                 let $fullpath-child := $fullpath-collection || "/" || $child
                 return 
                     xmldb:remove($fullpath-child)
@@ -99,12 +99,12 @@ declare function app:cleanup-collection($collection as xs:string, $prefix as xs:
  : Cleanup destination collection - delete resources from target collection
  :)
 declare function app:cleanup-resources($collection as xs:string, $prefix as xs:string) {
-    let $blacklist := config:blacklist()
+    let $ignore := config:ignore()
     let $fullpath-collection :=  $prefix || "/" || $collection 
 
     return
         for $child in xmldb:get-child-resources($fullpath-collection)
-            where not(contains($child, $blacklist))
+            where not(contains($child, $ignore))
             return 
                 xmldb:remove($fullpath-collection, $child)
 };

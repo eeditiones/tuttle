@@ -52,7 +52,7 @@
   </repos>
 
   <!-- these files will not be extracted from archives and left untouched when cleaning up -->
-  <blacklist>
+  <ignore>
       <file>existdb.json</file>
       <file>build.xml</file>
       <file>README.md</file>
@@ -60,7 +60,7 @@
       <file>expath-pkg.xml.tmpl</file>
       <file>repo.xml.tmpl</file>
       <file>build.properties.xml</file>
-  </blacklist>
+  </ignore>
   
   <!-- prefix, suffix, lock and apikeys can usually be left as-is -->
   <config prefix="/db/apps/" suffix="-stage" lock="git-lock.xml" apikeys="/db/system/auth/tuttle-token.xml">

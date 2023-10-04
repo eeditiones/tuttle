@@ -22,7 +22,7 @@
     </collection>
   </repos>
 
-  <blacklist>
+  <ignore>
       <file>existdb.json</file>
       <file>build.xml</file>
       <file>README.md</file>
@@ -30,7 +30,7 @@
       <file>expath-pkg.xml.tmpl</file>
       <file>repo.xml.tmpl</file>
       <file>build.properties.xml</file>
-  </blacklist>
+  </ignore>
 
   <config prefix="/db/apps/" suffix="-stage" lock="git-lock.xml" apikeys="/db/system/auth/tuttle-token.xml">
     <sm user="nobody" group="nogroup" mode="rw-r--r--"/>

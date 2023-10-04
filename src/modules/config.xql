@@ -80,10 +80,10 @@ declare function config:default-collection() as xs:string? {
 };
 
 (:~
- : Blacklist - these files are not checkout from git and are ignored
+ : ignore - these files are not checkout from git and are ignored
  :)
-declare function config:blacklist() as xs:string* {
-    $config:tuttle-config/blacklist/file/string()
+declare function config:ignore() as xs:string* {
+    $config:tuttle-config/ignore/file/string()
 };
 
 (:~
