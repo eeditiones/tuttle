@@ -4,6 +4,7 @@ module namespace app="http://exist-db.org/apps/tuttle/app";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
+import module namespace http="http://expath.org/ns/http-client";
 import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace repo="http://exist-db.org/xquery/repo";
 import module namespace sm="http://exist-db.org/xquery/securitymanager";
@@ -48,20 +49,15 @@ declare function app:unzip-store($path as xs:string, $data-type as xs:string, $d
  : Filter function to blacklist resources
  :)
 declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $param as item()*) as xs:boolean { 
-    let $blacklist := config:blacklist()
-    return
-        if (contains($path, $blacklist)) then
-            false()
-        else
-            true()
+    not(contains($path, config:blacklist()))
 };
 
 (:~
  : Move staging collection to final collection
  :)
 declare function app:move-collections($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
-    let $fullpath-collection-source :=  $prefix || "/" || $collection-source
-    let $fullpath-collection-target :=  $prefix || "/" || $collection-target
+    let $fullpath-collection-source := $prefix || "/" || $collection-source
+    let $fullpath-collection-target := $prefix || "/" || $collection-target
 
     return
         for $child in xmldb:get-child-collections($fullpath-collection-source) 
@@ -75,13 +71,13 @@ declare function app:move-collections($collection-source as xs:string, $collecti
  : Move staging collection to final collection
  :)
 declare function app:move-resources($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
-    let $fullpath-collection-source :=  $prefix || "/" || $collection-source
-    let $fullpath-collection-target :=  $prefix || "/" || $collection-target
+    let $fullpath-collection-source := $prefix || "/" || $collection-source
+    let $fullpath-collection-target := $prefix || "/" || $collection-target
     
     return
         for $child in xmldb:get-child-resources($fullpath-collection-source) 
-            return 
-                xmldb:move($fullpath-collection-source, $fullpath-collection-target, $child)
+        return 
+            xmldb:move($fullpath-collection-source, $fullpath-collection-target, $child)
 };
 
 (:~ 
@@ -117,18 +113,18 @@ declare function app:cleanup-resources($collection as xs:string, $prefix as xs:s
  : Random apikey generator
  :)
 declare function app:random-key($length as xs:int) {
-    let $secret := 
-    for $loop in 1 to $length 
-        let $random1 := util:random(9)+48
-        let $random2 := util:random(25)+65
-        let $random3 := util:random(25)+97
-        return 
-            if (util:random(2) = 1) then
-                fn:codepoints-to-string(($random2))
-            else if (util:random(2) = 1) then 
-                fn:codepoints-to-string(($random3))
-            else
-                fn:codepoints-to-string(($random1))
+    let $secret :=
+        for $loop in 1 to $length 
+            let $random1 := util:random(9)+48
+            let $random2 := util:random(25)+65
+            let $random3 := util:random(25)+97
+            return 
+                if (util:random(2) = 1) then
+                    fn:codepoints-to-string(($random2))
+                else if (util:random(2) = 1) then 
+                    fn:codepoints-to-string(($random3))
+                else
+                    fn:codepoints-to-string(($random1))
                 
     return string-join($secret)
 };
@@ -156,10 +152,10 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
     }
     catch * {
         map {
-                "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                }
+            "_error": map {
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
+            }
         }
     }
 };
@@ -169,15 +165,15 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
  :)
 declare function app:lock-write($collection as xs:string, $task as xs:string) {
     try {
-        let $xml := '<task><value>'|| $task ||'</value></task>'
-        return xmldb:store($collection, config:lock(), $xml)
+        xmldb:store($collection, config:lock(),
+            <task><value>{ $task }</value></task>)
     }
     catch * {
         map {
-                "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                }
+            "_error": map {
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
+            }
         }
     }
 };
@@ -191,10 +187,10 @@ declare function app:lock-remove($collection as xs:string) {
     }
     catch * {
         map {
-                "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                }
+            "_error": map {
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
+            }
         }
     }
 };
@@ -245,21 +241,6 @@ declare function app:set-permission($collection as xs:string, $path as xs:string
 };
 
 (:~
-: Get Sha of production collection
-:)
-declare function app:production-sha($collection as xs:string) {
-    let $gitsha := config:prefix() || "/" || $collection || "/gitsha.xml"
-
-    return 
-        if (doc($gitsha)/hash/value/text()) then 
-            doc($gitsha)/hash/value/text()
-        else
-            map { 
-                "message" : concat($gitsha, " not exist")
-            }
-};
-
-(:~
  : Helper function of unzip:mkcol() 
 :)
 declare function app:mkcol-recursive($collection, $components) as xs:string* {
@@ -278,14 +259,16 @@ declare function app:mkcol-recursive($collection, $components) as xs:string* {
  : Helper function to recursively create a collection hierarchy
  :)
 declare function app:mkcol($collection, $path) as xs:string* {
-    app:mkcol-recursive($collection, tokenize($path, "/") ! xmldb:encode(.))
+    app:mkcol-recursive($collection,
+        tokenize($path, "/") ! xmldb:encode(.))
 };
 
 (:~
  : Helper function to recursively create a collection hierarchy
  :)
 declare function app:mkcol($path) as xs:string* {
-    app:mkcol('/db', substring-after($path, "/db/"))
+    app:mkcol('/db',
+        substring-after($path, "/db/"))
 };
 
 (:~
@@ -307,3 +290,28 @@ declare function app:shorten-sha($git-sha as xs:string?) as xs:string? {
     substring($git-sha, 1, 7)
 };
 
+declare function app:request-json($request as element(http:request)) {
+    let $raw := app:request($request)
+    let $decoded := util:base64-decode($raw[2])
+    let $json := parse-json($decoded)
+    
+    return ($raw[1], $json)
+};
+
+(:~
+ : Github request
+ :)
+declare function app:request($request as element(http:request)) {
+    (: let $_ := util:log("info", $request/@href) :)
+    let $response := http:send-request($request)
+    let $status-code := xs:integer($response[1]/@status)
+
+    return
+        if ($status-code >= 400)
+        then error(xs:QName("app:connection-error"), "server connection failed: " || $response[1]/@message || " (" || $status-code || ")", $response[1])
+        else $response
+};
+
+declare function app:extract-archive($zip, $collection as xs:string) {
+    compression:unzip($zip, app:unzip-filter#3, (), app:unzip-store#4, $collection)
+};

@@ -19,7 +19,14 @@ const packageUri = existJSON.package.namespace
 const serverInfo = existJSON.servers.localhost
 const target = serverInfo.root
 
+const url = new URL(serverInfo.server)
+// console.log(url)
+
+// FIXME read from .existdb.json
 const connectionOptions = {
+    host: url.hostname,
+    port: url.port,
+    secure: url.protocol === 'https:',
     basic_auth: {
         user: serverInfo.user,
         pass: serverInfo.password

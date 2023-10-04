@@ -1,8 +1,18 @@
-a{
-    color:#555;
-
+html {
+    height: 100vh;
 }
-.api{
+
+body {
+    font-family:Verdana, sans-serif;
+    background: linear-gradient(180deg, rgba(19, 83, 102, 1) 6%, rgb(92, 112, 164) 100%);
+    color: white;
+}
+
+a {
+    color:#3b3b3b;
+}
+
+.api {
     font-size: 1rem;
     vertical-align: super;
     background: rgba(255,255,255,0.5);
@@ -11,15 +21,10 @@ a{
     color:#555;
 }
 
-body{
-    font-family:Verdana, sans-serif;
-    background: linear-gradient(180deg, rgba(9,185,238,0.9962359943977591) 6%, rgba(0,29,255,0.4) 100%);
-    color:white;
-}
 .wrapper, fx-fore, fx-switch{
     height: auto;
 }
-
+ 
 
 button{
     padding: 0.5rem;

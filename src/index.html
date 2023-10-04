@@ -1,11 +1,12 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
 
     <title>Tuttle Dashboard</title>
-    <link rel="stylesheet" href="resources/css/fore.css">
-    <link rel="stylesheet" href="resources/css/vars.css">
-    <link rel="stylesheet" href="resources/css/styles.css">
+    <link rel="stylesheet" href="resources/css/fore.css" />
+    <link rel="stylesheet" href="resources/css/vars.css" />
+    <link rel="stylesheet" href="resources/css/styles.css" />
 
 </head>
 <body>
@@ -158,11 +159,11 @@
                 <section class="login">
                     <fx-control ref="instance('auth')/user" update-event="enter">
                         <label>User</label>
-                        <input type="text" autofocus autocomplete="false">
+                        <input type="text" autofocus="autofocus" autocomplete="false" />
                     </fx-control>
                     <fx-control ref="instance('auth')/password" update-event="enter">
                         <label>Password</label>
-                        <input type="password">
+                        <input type="password" />
                     </fx-control>
 
                     <fx-trigger>
@@ -205,8 +206,6 @@
         </fx-switch>
     </fx-fore>
     <script type="module" src="./js/fore-all.js"></script>
-
-
 </div>
 </body>
 </html>
