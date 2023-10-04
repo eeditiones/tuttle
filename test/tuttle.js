@@ -4,6 +4,8 @@ const chai = require('chai')
 const expect = chai.expect
 
 describe('Tuttle', function () {
+    const defaultCollection = 'tuttle-sample-data'
+
     describe('git/status', function () {
         let res, repos, defaultRepo
 
@@ -20,7 +22,7 @@ describe('Tuttle', function () {
 
         it('default repo', function () {
             expect(defaultRepo).to.exist;
-            expect(defaultRepo).to.equal('tuttle-sample-data');
+            expect(defaultRepo).to.equal(defaultCollection);
         });
 
         it('lists repos', function () {
@@ -31,12 +33,12 @@ describe('Tuttle', function () {
         it('github sample repo is up to date', function () {
             expect(repos[0]).to.deep.equal({
                 baseurl: "https://api.github.com/",
-                collection: "tuttle-sample-data",
+                collection: defaultCollection,
                 deployed: "5006b2c",
                 hookuser: "admin",
                 message: "remote found",
                 owner: "eeditiones",
-                path: "/db/apps/tuttle-sample-data",
+                path: `/db/apps/${defaultCollection}`,
                 "project-id": null,
                 ref: "next",
                 remote: "5006b2c",
@@ -79,7 +81,22 @@ describe('Tuttle', function () {
         });
 
         it('confirms no lockfile to be present', function () {
-            expect(res.data.message).to.equal("No lockfile for 'tuttle-sample-data' found.");
+            expect(res.data.message).to.equal(`No lockfile for '${defaultCollection}' found.`);
+        });
+    });
+
+    describe(`git/${defaultCollection}/lockfile`, function () {
+        let res
+        before(async function () {
+            res = await axios.get(`git/${defaultCollection}/lockfile`, { auth });
+        });
+
+        it('returns status 200', function () {
+            expect(res.status).to.equal(200);
+        });
+
+        it('confirms no lockfile to be present', function () {
+            expect(res.data.message).to.equal(`No lockfile for '${defaultCollection}' found.`);
         });
     });
 

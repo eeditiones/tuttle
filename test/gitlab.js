@@ -5,35 +5,40 @@ const expect = chai.expect
 describe('Gitlab', function () {
   this.timeout(10000);
   
-  let testHASH = '79789e5';
+  const testHASH = '79789e5';
+  const collection = 'tuttle-sample-gitlab'
 
   it('Remove lockfile', async function () {
-    const res = await axios.post('git/tuttle-sample-gitlab/lockfile', {}, { auth });
+    const res = await axios.post(`git/${collection}/lockfile`, {}, { auth });
     expect(res.status).to.equal(200);
   });
 
   it('Get changelog', async function () {
-    const res = await axios.get('git/tuttle-sample-gitlab/commits', { auth });
+    const res = await axios.get(`git/${collection}/commits`, { auth });
     expect(res.status).to.equal(200);
     // console.log(res.data)
     expect(res.data.commits.length).to.be.greaterThan(2);
   });
 
   it('Pull ' + testHASH + ' into staging collection', async function () {
-    const res = await axios.get('git/tuttle-sample-gitlab?hash=' + testHASH, { auth });
+    const res = await axios.get(`git/${collection}?hash=${testHASH}`, { auth });
 
     expect(res.status).to.equal(200);
-    expect(res.data).to.deep.equal({'message': 'success'});
+    expect(res.data).to.deep.equal({
+      message: 'success',
+      collection: `/db/apps/${collection}-stage`,
+      hash: testHASH
+    });
   });
 
   it('Deploy staging to target collection', async function () {
-    const res = await axios.post('git/tuttle-sample-gitlab', {}, { auth });
+    const res = await axios.post(`git/${collection}`, {}, { auth });
     expect(res.status).to.equal(200);
-    expect(res.data).to.deep.include({'message': 'success'});
+    expect(res.data).to.deep.include({ message: 'success'});
   });
 
   it('Check Hashes', async function () {
-    const res = await axios.get('git/tuttle-sample-gitlab/hash', { auth });
+    const res = await axios.get(`git/${collection}/hash`, { auth });
 
     expect(res.status).to.equal(200);
     expect(res.data).to.deep.include({ 'local-hash': testHASH });
@@ -48,29 +53,29 @@ describe('Gitlab', function () {
 
       before(async function () {
         this.timeout(10000);
-        dryRunResponse = await axios.post('git/tuttle-sample-gitlab/incremental?dry=true', {}, { auth });
+        dryRunResponse = await axios.post(`git/${collection}/incremental?dry=true`, {}, { auth });
 
-        console.log('message', dryRunResponse.data.message)
-        
-        // console.log('files to delete', delFiles)
-        // console.log('files to fetch', newFiles)
+        // console.log('message', dryRunResponse.data.message)
       })
 
       it('Succeeds', function () {
         expect(dryRunResponse.status).to.equal(200);
-        expect(dryRunResponse.data.message).to.equal('success');
+        expect(dryRunResponse.data.message).to.equal('dry-run');
       })
 
       it('Returns a list of new resources', async function () {
         newFiles = await Promise.all(dryRunResponse.data.changes.new.map(async (resource) => {
-          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource);
+          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource}`);
           return [resource, resourceInfo.modified];
         }))
+        // console.log('files to fetch', newFiles)
 
-        expect(newFiles.length).to.be.greaterThan(0);
+        expect(newFiles.length).to.equal(3);
         expect(newFiles[0][0]).to.equal('data/F-aww.xml')
         expect(newFiles[0][1]).to.be.a('date')
+
         expect(newFiles[1]).to.deep.equal([ 'data/F-tit2.xml', undefined ])
+
         expect(newFiles[2][0]).to.equal('data/F-ham.xml')
         expect(newFiles[2][1]).to.be.a('date')
       });
@@ -89,7 +94,8 @@ describe('Gitlab', function () {
       let incrementalUpdateResponse
       before(async function () {
         this.timeout(10000);
-        incrementalUpdateResponse = await axios.post('git/tuttle-sample-gitlab/incremental', {}, { auth });
+        incrementalUpdateResponse = await axios.post(`git/${collection}/incremental`, {}, { auth });
+        // console.log('incrementalUpdateResponse', incrementalUpdateResponse.data)
       })
 
       it('succeeds', function () {
@@ -99,7 +105,7 @@ describe('Gitlab', function () {
 
       it('updates all changed resources', async function () {
         await Promise.all(newFiles.map(async (resource) => {
-          const { modified } = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource[0]);
+          const { modified } = await getResourceInfo(`/db/apps/${collection}/${resource[0]}`);
           expect(modified).to.not.be.undefined;
           expect(modified).to.not.equal(resource[1]);
         }))
@@ -107,7 +113,7 @@ describe('Gitlab', function () {
 
       it('deletes all deleted resources', async function () {
         await Promise.all(delFiles.map(async (resource) => {
-          const resourceInfo = await getResourceInfo("/db/apps/tuttle-sample-gitlab/" + resource);
+          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource}`);
           expect(resourceInfo).is.empty;
         }))
       })

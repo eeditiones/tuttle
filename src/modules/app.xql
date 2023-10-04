@@ -164,35 +164,19 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
  : Write lock file
  :)
 declare function app:lock-write($collection as xs:string, $task as xs:string) {
-    try {
+    if (xmldb:collection-available($collection)) then (
         xmldb:store($collection, config:lock(),
             <task><value>{ $task }</value></task>)
-    }
-    catch * {
-        map {
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+    ) else ()
 };
 
 (:~
  : Delete lock file
  :)
 declare function app:lock-remove($collection as xs:string) {
-    try {
+    if (doc-available($collection || "/" || config:lock())) then (
         xmldb:remove($collection, config:lock())
-    }
-    catch * {
-        map {
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+    ) else ()
 };
 
 (:~
@@ -312,6 +296,50 @@ declare function app:request($request as element(http:request)) {
         else $response
 };
 
-declare function app:extract-archive($zip, $collection as xs:string) {
+declare function app:extract-archive($zip as xs:base64Binary, $collection as xs:string) {
     compression:unzip($zip, app:unzip-filter#3, (), app:unzip-store#4, $collection)
+};
+
+(:~
+ : resolve file path against a base collection
+ : $base the absolute DB path to a collection. Assumes no slash at the end
+ : $filepath never begins with slash and always points to a resource
+    ("/db", "a/b/c") -> map { "name": "c", "collection": "/db/a/b/"}
+ :)
+declare function app:file-to-resource($base as xs:string, $filepath as xs:string) as map(*) {
+    let $parts := tokenize($filepath, '/')
+    let $rel-path := subsequence($parts, 0, count($parts)) (: cut off last part :)
+    return map {
+        "name": xmldb:encode($parts[last()]),
+        "collection": string-join(($base, $rel-path), "/") || "/"
+    }
+};
+
+declare function app:delete-resource($config as map(*), $filepath as xs:string) as xs:boolean {
+    let $resource := app:file-to-resource($config?path, $filepath)
+    let $remove := xmldb:remove($resource?collection, $resource?name)
+    let $remove-empty-col := 
+        if (empty(xmldb:get-child-resources($resource?collection))) then (
+            xmldb:remove($resource?collection)
+        ) else ()
+
+    return true()
+};
+
+(:~
+ : Incremental update fetch and add files from git
+ :)
+declare function app:add-resource($config as map(*), $filepath as xs:string, $data as item()) as xs:boolean {
+    let $resource := app:file-to-resource($config?path, $filepath)
+
+    let $collection-check := 
+        if (xmldb:collection-available($resource?collection)) then ()
+        else (
+            app:mkcol($resource?collection),
+            app:set-permission($config?collection, $resource?collection, "collection")
+        )
+
+    let $store := xmldb:store($resource?collection, $resource?name, $data)
+    let $chmod := app:set-permission($config?collection, $resource?collection || $resource?name, "resource")
+    return true()
 };

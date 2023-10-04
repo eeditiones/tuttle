@@ -32,34 +32,9 @@ declare function github:commit-ref-url($config as map(*), $per-page as xs:intege
 (:~
  : Clone defines Version repo
  :)
-declare function github:clone($config as map(*), $collection as xs:string, $sha as xs:string?) as map(*) {
-    try {
-        let $zip := github:request(
-            github:repo-url($config) || "/zipball/" || $sha, $config?token)
-
-        let $delete-collection :=
-            if (xmldb:collection-available($collection))
-            then xmldb:remove($collection)
-            else ()
-
-        let $create-collection := xmldb:create-collection("/", $collection)
-
-        let $write-sha := app:write-sha($collection,
-            if (exists($sha)) then $sha else github:get-last-commit($config)?sha)
-        
-        let $clone := app:extract-archive($zip, $collection)
-
-        return map { "message" : "success" }
-    }
-    catch * {
-        map {
-            "message": $err:description,
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+declare function github:get-archive($config as map(*), $sha as xs:string) as xs:base64Binary {
+    github:request(
+        github:repo-url($config) || "/zipball/" || $sha, $config?token)
 };
 
 (:~
@@ -193,10 +168,13 @@ declare function github:incremental-dry($config as map(*)) {
 declare function github:incremental($config as map(*)) {
     let $sha := github:get-last-commit($config)?sha
     let $changes := github:get-changes($config)
+    let $new := github:incremental-add($config, $changes?new, $sha)
     let $del := github:incremental-delete($config, $changes?del)
-    let $add := github:incremental-add($config, $changes?new, $sha)
     let $writesha := app:write-sha($config?path, $sha)
-    return ($del, $add) 
+    return map {
+        'new': array{ $new },
+        'del': array{ $del }
+    }
 };
 
 
@@ -213,12 +191,11 @@ declare function github:get-commit-files($config as map(*), $sha as xs:string) a
 (:~
  : Get blob of a file
  :)
-declare function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
+declare function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) as xs:string {
     let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
-    let $json := github:request-json($blob-url, $config?token)
-    
-    return
-        util:base64-decode($json?content)
+    let $content := github:request-json($blob-url, $config?token)?content
+
+    return util:base64-decode($content)
 };
 
 (:~
@@ -244,64 +221,36 @@ declare function github:check-signature($collection as xs:string, $apikey as xs:
 (:~ 
  : Incremental updates delete files
  :)
-declare %private function github:incremental-delete($config as map(*), $files as xs:string*) {
-    for $resource in $files
-    let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := $config?path || "/" || $resource-path
-    let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
-
-    return
+declare %private function github:incremental-delete($config as map(*), $files as xs:string*) as array(*)* {
+    for $filepath in $files
+    return 
         try {
-            let $remove := xmldb:remove($resource-collection, $resource-filename)
-            let $remove-empty-col := 
-                if (empty(xmldb:get-child-resources($resource-collection))) then
-                    xmldb:remove($resource-collection)
-                    else ()
-            return ()
+            [ $filepath, app:delete-resource($config, $filepath) ]
         }
         catch * {
-            map {
-                "resource": $resource,
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+            [ $filepath, false(), map{
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
+            }]
         }
 };
 
 (:~
  : Incremental update fetch and add files from git
  :)
-declare %private function github:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) {
-    for $resource in $files
-    let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := $config?path || "/" || $resource-path
-    let $resource-filename :=
-        if ($resource-path = "") then
-            xmldb:encode($resource)
-        else
-            xmldb:encode(replace($resource, $resource-path, ""))
-
-    let $resource-fullpath := $resource-collection || $resource-filename
-
+declare %private function github:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) as array(*)* {
+    for $filepath in $files
     return 
         try {
-            let $data := github:get-blob($config, $resource, $sha)
-            let $collection-check := 
-                if (xmldb:collection-available($resource-collection)) then ()
-                else (
-                    app:mkcol($resource-collection),
-                    app:set-permission($config?collection, $resource-collection, "collection")
-                )
-            let $store := xmldb:store($resource-collection, $resource-filename, $data)
-            let $chmod := app:set-permission($config?collection, $resource-fullpath, "resource")
-            return ()
+            [ $filepath,
+                app:add-resource($config, $filepath,
+                    github:get-blob($config, $filepath, $sha))]
         }
         catch * {
-            map {
-                "resource": $resource,
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+            [ $filepath, false(), map{
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
+            }]
         }
 };
 

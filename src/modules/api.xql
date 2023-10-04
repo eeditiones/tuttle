@@ -12,6 +12,7 @@ import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace vcs="http://e-editiones.org/tuttle/vcs" at "vcs.xqm";
 import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
 import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
+import module namespace collection="http://existsolutions.com/modules/collection" at "collection.xqm";
 
 
 (:~
@@ -115,7 +116,7 @@ declare function api:get-hash($request as map(*)) as map(*) {
 (:~
 : Remove lockfile
 :)
-declare function api:lock-remove($request as map(*)) {
+declare function api:lock-remove($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
         let $lockfile := $config?path || "/" || config:lock()
@@ -137,7 +138,7 @@ declare function api:lock-remove($request as map(*)) {
 (:~
 : Print lockfile
 :)
-declare function api:lock-print($request as map(*)) {
+declare function api:lock-print($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
         let $lockfile := $config?path || '/' || config:lock()
@@ -153,71 +154,69 @@ declare function api:lock-print($request as map(*)) {
     }
 };
 
-(:~ 
- : Clone repo to collection 
+(:~
+ : Load repository state to staging collection
  :)
-declare function api:git-pull($request as map(*)) {
-    try {
-        let $config := api:get-collection-config($request?parameters?collection)
-        let $collection-staging := $config?path || config:suffix()
-        let $collection-staging-sha := $config?path || config:suffix() || "/gitsha.xml"
-        let $lockfile := $config?collection || "/" || config:lock()
-        let $collection-destination := $config?collection
-
-        return
-            if (doc-available($lockfile)) then (
-                map { "message" : doc($lockfile)/task/value/text() || " in progress" }
-            )
-            else (
-                let $actions := vcs:get-actions($config?type)
-                let $write-lock := app:lock-write($collection-destination, "git-pull")
-                let $commit :=
-                    if ($request?parameters?hash) then (
-                        $request?parameters?hash
-                    )
-                    else (
-                        $actions?get-last-commit($config)?sha
-                    )
-
-                let $clone := $actions?clone($config, $collection-staging, $commit)
-
-                let $remove-lock := app:lock-remove($collection-destination)
-                return $clone
-            )
-    }
-    catch * {
-        map { "message": $err:description }
-    }
+declare function api:git-pull($request as map(*)) as map(*) {
+    api:pull(
+        api:get-collection-config($request?parameters?collection),
+        $request?parameters?hash)
 };
 
-declare function api:git-pull-default($request as map(*)) {
+(:~
+ : Load default repository state to staging collection
+ :)
+declare function api:git-pull-default($request as map(*)) as map(*) {
+    api:pull(
+        api:get-default-collection-config(),
+        $request?parameters?hash)
+};
+
+(:~
+ : Load repository state to staging collection
+ :)
+declare %private function api:pull($config as map(*), $hash as xs:string?) as map(*) {
     try {
-        let $config := api:get-default-collection-config()
-        let $collection-staging := config:prefix() || $config?collection || config:suffix()
-        let $collection-staging-sha := $collection-staging || "/gitsha.xml"
-        let $lockfile := $config?collection || "/" || config:lock()
-        let $collection-destination := $config?collection
+        if (doc-available($config?collection || "/" || config:lock())) then (
+            map { "message" : doc($config?collection || "/" || config:lock())/task/value/text() || " in progress" }
+        )
+        else (
+            let $actions := vcs:get-actions($config?type)
+            let $write-lock := app:lock-write($config?collection, "git-pull")
 
-        return
-            if (doc-available($lockfile)) then (
-                map { "message" : doc($lockfile)/task/value/text() || " in progress" }
-            )
-            else (
-                let $actions := vcs:get-actions($config?type)
-                let $write-lock := app:lock-write($collection-destination, "git-pull")
-                let $commit :=
-                    if ($request?parameters?hash)
-                    then $request?parameters?hash
-                    else $actions?get-last-commit($config)?sha
+            let $staging-collection := $config?path || config:suffix()
 
-                let $clone := $actions?clone($config, $collection-staging, $commit)
+            let $delete-collection := collection:remove($staging-collection, true())
+            let $create-collection := collection:create($staging-collection)
 
-                let $remove-lock := app:lock-remove($collection-destination)
-                return $clone
-            )
+            let $sha :=
+                if (exists($hash)) then (
+                    $hash
+                ) else (
+                    $actions?get-last-commit($config)?sha
+                )
+
+            let $write-sha := app:write-sha($staging-collection, $sha)
+
+            let $zip := $actions?get-archive($config, $sha)
+            let $extract := app:extract-archive($zip, $staging-collection)
+
+            let $remove-lock := app:lock-remove($config?collection)
+            return map {
+                "message" : "success",
+                "hash": $sha,
+                "collection": $staging-collection
+            }
+        )
     }
     catch * {
-        map { "message": $err:description }
+        map {
+            "message": $err:description,
+            "error": map {
+                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "line": $err:line-number, "column": $err:column-number, "module": $err:module
+            }
+        }
     }
 };
 
@@ -225,7 +224,7 @@ declare function api:git-pull-default($request as map(*)) {
  : Deploy  Repo 
 :)
 
-declare function api:git-deploy($request as map(*)) {
+declare function api:git-deploy($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
         let $collection-destination := $config?path
@@ -235,64 +234,60 @@ declare function api:git-deploy($request as map(*)) {
         let $collection-staging := $config?collection || config:suffix() 
         let $collection-staging-uri := $config?path || config:suffix() 
         
+        let $ensure-destination-collection := collection:create($config?path)
         return
             if (not(xmldb:collection-available($collection-staging-uri)))
-            then map { "message" : "Staging collection '" || $collection-staging-uri || "' does not exist" }
+            then map { "message" : "Staging collection '" || $collection-staging-uri || "' does not exist!" }
             else if (doc-available($lockfile))
-            then map { "message" : doc($lockfile)/task/value/text() || " in progress" }
+            then map { "message" : doc($lockfile)/task/value/text() || " in progress!" }
+            else if (exists($ensure-destination-collection?error))
+            then map { "message" : "Could not create destination collection!", "error": $ensure-destination-collection?error }
             else
-                let $check-lock-dst :=
-                    if (xmldb:collection-available($config?path))
-                    then ()
-                    else xmldb:create-collection(config:prefix(), $config?collection)
-
                 let $write-lock := app:lock-write($config?path, "deploy")
-                let $xar-list := xmldb:get-child-resources($collection-staging-uri)
-                let $xar-check :=
-                    if (not($xar-list = "expath-pkg.xml" and $xar-list = "repo.xml"))
+                let $is-expath-package := xmldb:get-child-resources($collection-staging-uri) = ("expath-pkg.xml", "repo.xml")
+                let $deploy :=
+                    if ($is-expath-package)
                     then (
-                        let $cleanup-col := app:cleanup-collection($config?collection, config:prefix())
-                        let $cleanup-res := app:cleanup-resources($config?collection, config:prefix())
-                        let $move-col := app:move-collections($collection-staging, $config?collection, config:prefix())
-                        let $move-res := app:move-resources($collection-staging, $config?collection, config:prefix())
-                        let $set-permissions := app:set-permission($config?collection)
-                        return
-                            map {
-                                "sha": config:deployed-sha($config?path),
-                                "message": "success"
-                            }
-                    )
-                    else (
+                        let $package := doc(concat($config?path, "/expath-pkg.xml"))//@name/string()
                         let $remove-pkg :=
-                            if (contains(repo:list(), $config?collection))
+                            if ($package = repo:list())
                             then (
-                                let $package := doc(concat($config?path, "/expath-pkg.xml"))//@name/string()
                                 let $undeploy := repo:undeploy($package)
-                                return repo:remove($package) 
+                                let $remove := repo:remove($package)
+                                return ($undeploy, $remove)
                             )
                             else ()
                             
                         let $xar :=
                             xmldb:store-as-binary(
                                 $collection-staging-uri, "pkg.xar", 
-                                compression:zip(xs:anyURI($collection-staging-uri),
-                                true(), $collection-staging-uri)
-                            )
+                                compression:zip(xs:anyURI($collection-staging-uri), true(), $collection-staging-uri))
 
-                        let $install := repo:install-and-deploy-from-db(concat($collection-staging-uri, "/pkg.xar"))
-                        return 
-                            map {
-                                "sha": config:deployed-sha($config?path),
-                                "message": "success"
-                            }
+                        let $install := repo:install-and-deploy-from-db($xar)
+                        return "package installation"
                     )
-                let $remove-staging := xmldb:remove($collection-staging-uri)
+                    else (
+                        let $cleanup-col := app:cleanup-collection($config?collection, config:prefix())
+                        let $cleanup-res := app:cleanup-resources($config?collection, config:prefix())
+                        let $move-col := app:move-collections($collection-staging, $config?collection, config:prefix())
+                        let $move-res := app:move-resources($collection-staging, $config?collection, config:prefix())
+                        let $set-permissions := app:set-permission($config?collection)
+                        return "data move"
+                    )
+
+                let $remove-staging := collection:remove($collection-staging-uri, true())
                 let $remove-lock := app:lock-remove($collection-destination)
-                return $xar-check
+
+                return map {
+                    "hash": config:deployed-sha($config?path),
+                    "message": "success"
+                }
+
     }
     catch * {
         map {
-            "_error": map {
+            "message": $err:description,
+            "error": map {
                 "code": $err:code, "description": $err:description, "value": $err:value, 
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
@@ -350,43 +345,42 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
 declare function api:incremental($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
-        let $drymode := $request?parameters?dry
-        let $collection-path := $config?path
-        let $lockfile := $collection-path || "/" || config:lock()
-        let $collection-destination-sha := $collection-path || "/gitsha.xml"
+        let $lockfile := $config?path || "/" || config:lock()
         let $actions := vcs:get-actions($config?type)
 
         return
-        if (not(xmldb:collection-available($collection-path))) then (
-            map { "message" : "Destination collection not exist" }
-        )
-        else if (not(doc-available($collection-destination-sha))) then (
-            map { "message" : "Collection not managed by Tuttle" }
-        )
-        else if (exists($drymode) and $drymode) then
-            map {
-                "changes" : $actions?incremental-dry($config),
-                "message" : "success"
-            }
-        else if (doc-available($lockfile)) then (
-            map { "message" : doc($lockfile)/task/value/text() || " in progress" }
-        )
-        else (
-            let $write-lock := app:lock-write($collection-path, "incremental")
-            let $incremental := $actions?incremental($config)
-            let $remove-lock := app:lock-remove($collection-path)
-
-            return
+            if (not(xmldb:collection-available($config?path))) then (
+                map { "message" : "Destination collection not exist" }
+            )
+            else if (empty($config?deployed)) then (
+                map { "message" : "Collection not managed by Tuttle" }
+            )
+            else if ($request?parameters?dry) then
                 map {
-                    "sha": config:deployed-sha($config?path),
-                    "message": "success"
+                    "changes" : $actions?incremental-dry($config),
+                    "message" : "dry-run"
                 }
-        )
+            else if (doc-available($lockfile)) then (
+                map { "message" : doc($lockfile)/task/value/text() || " in progress" }
+            )
+            else (
+                let $write-lock := app:lock-write($config?path, "incremental")
+                let $incremental := $actions?incremental($config)
+                let $errors := some $a in ($incremental?new?*, $incremental?del?*)?2 satisfies not($a)
+                let $remove-lock := app:lock-remove($config?path)
+
+                return
+                    map {
+                        "hash": config:deployed-sha($config?path),
+                        "message": if ($errors) then "ended with errors" else "success",
+                        "changes": $incremental
+                    }
+            )
     }
     catch * {
         map {
             "message": $err:description,
-            "_error": map {
+            "error": map {
                 "code": $err:code, "description": $err:description, "value": $err:value, 
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
@@ -397,7 +391,7 @@ declare function api:incremental($request as map(*)) as map(*) {
 (:~
  : APIKey generation for webhooks
  :)
-declare function api:api-keygen($request as map(*)) {
+declare function api:api-keygen($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
         let $apikey := app:random-key(42)
@@ -413,7 +407,7 @@ declare function api:api-keygen($request as map(*)) {
 (:~ 
  : Webhook function 
  :)
-declare function api:hook($request as map(*)) {
+declare function api:hook($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
         let $apikey := doc(config:apikeys())//apikeys/collection[name = $config?collection]/key/string()

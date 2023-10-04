@@ -10,9 +10,9 @@ declare variable $config:tuttle-config as element(tuttle) := doc("/db/apps/tuttl
 (:~
  : Git configuration
  :)
-declare function config:collections($collection as xs:string) as map(*)? {
-    let $collection-config := $config:tuttle-config/repos/collection[@name = $collection]
-    let $path := config:prefix() || $collection
+declare function config:collections($collection-name as xs:string) as map(*)? {
+    let $collection-config := $config:tuttle-config/repos/collection[@name = $collection-name]
+    let $path := config:prefix() || $collection-name
 
     return
         if (empty($collection-config))
@@ -23,10 +23,11 @@ declare function config:collections($collection as xs:string) as map(*)? {
             "repo" : $collection-config/repo/string(),
             "owner" : $collection-config/owner/string(),
             "project-id" : $collection-config/project-id/string(),
+            "ref": $collection-config/ref/string(),
+            "collection": $collection-name,
+
             "type": $collection-config/type/string(),
             "baseurl": $collection-config/baseurl/string(),
-            "ref": $collection-config/ref/string(),
-            "collection": $collection-config/@name/string(),
             "hookuser":  $collection-config/hookuser/string(),
 
             "path": $path,
@@ -73,7 +74,7 @@ declare function config:list-collections() as xs:string* {
 
 
 (:~
- : Defile default collection
+ : get default collection
  :)
 declare function config:default-collection() as xs:string? {
     $config:tuttle-config/repos/collection[default="true"]/@name/string()
