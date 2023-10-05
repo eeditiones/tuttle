@@ -7,16 +7,20 @@ declare variable $exist:controller external;
 declare variable $exist:prefix external;
 declare variable $exist:root external;
 
-if ($exist:path eq "") then
+declare variable $is-get := lower-case(request:get-method()) eq 'get';
+
+if ($is-get and $exist:path eq "") then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <redirect url="{request:get-uri()}/"/>
     </dispatch>
 
-(: forward root path to index.xql :)
-else if ($exist:path eq "/") then
+else if ($is-get and $exist:path eq "/") then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <redirect url="index.html"/>
+        <forward url="{$exist:controller}/index.html">
+            <set-header name="Content-Type" value="text/html"/>
+        </forward>
     </dispatch>
+
 else if ($exist:resource eq 'login') then
     let $loggedIn := login:set-user("org.exist.login", (), false())
     let $user := request:get-attribute("org.exist.login.user")
@@ -40,56 +44,14 @@ else if ($exist:resource eq 'login') then
     )
 
 (: static HTML page for API documentation should be served directly to make sure it is always accessible :)
-else if ($exist:path eq "/index.html") then
+else if ($is-get and $exist:path eq "/api.html" or $exist:path eq "/api.json") then
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist" />
+
+(: serve static resources :)
+else if ($is-get and matches($exist:path, "^/(css|js|images)/[^/]+\.(css|js(\.map)?|svg|jpg|png)$")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <set-header name="Content-Type" value="text/html"/>
-    </dispatch>
-else if ($exist:path eq "/data/tuttle.xml") then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <forward url="{$exist:controller}/data/tuttle.xml">
+        <forward url="{$exist:controller}/resources/{$exist:path}">
             <set-header name="Cache-Control" value="max-age=31536000"/>
-        </forward>
-    </dispatch>
-else if ($exist:path eq "/api.html" or ends-with($exist:resource, "json")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-
-(: other images are resolved against the data collection and also returned directly :)
-else if (matches($exist:resource, "\.(css)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-
-else if (matches($exist:resource, "\.(js)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-
-else if (matches($exist:resource, "\.(js.map)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-
-else if (matches($exist:resource, "\.(png)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-else if (matches($exist:resource, "\.(svg)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-    </dispatch>
-
-else if (matches($exist:resource, "\.(png|jpg|jpeg|gif|tif|tiff|txt|mei|js)$", "s")) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <forward url="{$exist:controller}/data/{$exist:path}">
-            <set-header name="Cache-Control" value="max-age=31536000"/>
-        </forward>
-    </dispatch>
-
-(: use a different Open API router, needs exist-jwt installed! :)
-else if (starts-with($exist:path, '/jwt')) then
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <forward url="{$exist:controller}/modules/custom-router.xq">
-            <set-header name="Access-Control-Allow-Origin" value="*"/>
-            <set-header name="Access-Control-Allow-Credentials" value="true"/>
-            <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
-            <set-header name="Access-Control-Allow-Headers" value="Accept, Content-Type, Authorization, X-Auth-Token"/>
-            <set-header name="Cache-Control" value="no-cache"/>
         </forward>
     </dispatch>
 
