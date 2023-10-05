@@ -94,7 +94,7 @@ describe('Github', function () {
       before(async function () {
         this.timeout(10000);
         incrementalUpdateResponse = await axios.post('git/incremental', {}, { auth });
-        // console.log('incrementalUpdateResponse', incrementalUpdateResponse.data)
+        // console.log('incrementalUpdateResponse', incrementalUpdateResponse.data.changes)
       })
 
       it('succeeds', function () {

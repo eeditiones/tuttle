@@ -227,28 +227,25 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
 declare function api:git-deploy($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
-        let $collection-destination := $config?path
-        let $collection-destination-sha := $config?path || "/gitsha.xml"
+        let $destination := $config?path
         let $lockfile := $config?path || "/" || config:lock()
-
-        let $collection-staging := $config?collection || config:suffix() 
-        let $collection-staging-uri := $config?path || config:suffix() 
+        let $staging := $config?path || config:suffix() 
         
-        let $ensure-destination-collection := collection:create($config?path)
+        let $ensure-destination-collection := collection:create($destination)
         return
-            if (not(xmldb:collection-available($collection-staging-uri)))
-            then map { "message" : "Staging collection '" || $collection-staging-uri || "' does not exist!" }
+            if (not(xmldb:collection-available($staging)))
+            then map { "message" : "Staging collection '" || $staging || "' does not exist!" }
             else if (doc-available($lockfile))
             then map { "message" : doc($lockfile)/task/value/text() || " in progress!" }
             else if (exists($ensure-destination-collection?error))
             then map { "message" : "Could not create destination collection!", "error": $ensure-destination-collection?error }
             else
-                let $write-lock := app:lock-write($config?path, "deploy")
-                let $is-expath-package := xmldb:get-child-resources($collection-staging-uri) = ("expath-pkg.xml", "repo.xml")
+                let $write-lock := app:lock-write($destination, "deploy")
+                let $is-expath-package := xmldb:get-child-resources($staging) = ("expath-pkg.xml", "repo.xml")
                 let $deploy :=
                     if ($is-expath-package)
                     then (
-                        let $package := doc(concat($config?path, "/expath-pkg.xml"))//@name/string()
+                        let $package := doc(concat($staging, "/expath-pkg.xml"))//@name/string()
                         let $remove-pkg :=
                             if ($package = repo:list())
                             then (
@@ -260,26 +257,24 @@ declare function api:git-deploy($request as map(*)) as map(*) {
                             
                         let $xar :=
                             xmldb:store-as-binary(
-                                $collection-staging-uri, "pkg.xar", 
-                                compression:zip(xs:anyURI($collection-staging-uri), true(), $collection-staging-uri))
+                                $staging, "pkg.xar", 
+                                compression:zip(xs:anyURI($staging), true(), $staging))
 
                         let $install := repo:install-and-deploy-from-db($xar)
                         return "package installation"
                     )
                     else (
-                        let $cleanup-col := app:cleanup-collection($config?collection, config:prefix())
-                        let $cleanup-res := app:cleanup-resources($config?collection, config:prefix())
-                        let $move-col := app:move-collections($collection-staging, $config?collection, config:prefix())
-                        let $move-res := app:move-resources($collection-staging, $config?collection, config:prefix())
-                        let $set-permissions := app:set-permission($config?path)
+                        let $cleanup-col := app:cleanup-collection($destination)
+                        let $move-col := app:move-collections($staging, $destination)
+                        let $set-permissions := app:set-permission($destination)
                         return "data move"
                     )
 
-                let $remove-staging := collection:remove($collection-staging-uri, true())
-                let $remove-lock := app:lock-remove($collection-destination)
+                let $remove-staging := collection:remove($staging, true())
+                let $remove-lock := app:lock-remove($destination)
 
                 return map {
-                    "hash": config:deployed-sha($config?path),
+                    "hash": config:deployed-sha($destination),
                     "message": "success"
                 }
 
