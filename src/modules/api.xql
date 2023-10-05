@@ -271,7 +271,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
                         let $cleanup-res := app:cleanup-resources($config?collection, config:prefix())
                         let $move-col := app:move-collections($collection-staging, $config?collection, config:prefix())
                         let $move-res := app:move-resources($collection-staging, $config?collection, config:prefix())
-                        let $set-permissions := app:set-permission($config?collection)
+                        let $set-permissions := app:set-permission($config?path)
                         return "data move"
                     )
 
@@ -468,7 +468,7 @@ declare %private function api:get-default-collection-config() as map(*)? {
 
 declare %private function api:get-collection-config($collection as xs:string?) as map(*)? {
     let $git-collection :=
-        if (exists($collection) and not(empty($collection)))
+        if (exists($collection) and $collection ne '')
         then xmldb:decode-uri($collection)
         else config:default-collection()
 
