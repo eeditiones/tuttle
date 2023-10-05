@@ -265,7 +265,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
                     )
                     else (
                         let $cleanup-col := app:cleanup-collection($destination)
-                        let $move-col := app:move-collections($staging, $destination)
+                        let $move-col := app:move-collection($staging, $destination)
                         let $set-permissions := app:set-permission($destination)
                         return "data move"
                     )

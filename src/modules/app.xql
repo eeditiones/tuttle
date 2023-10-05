@@ -49,7 +49,7 @@ declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $
 (:~
  : Move staging collection to final collection
  :)
-declare function app:move-collections($collection-source as xs:string, $collection-target as xs:string) {
+declare function app:move-collection($collection-source as xs:string, $collection-target as xs:string) {
     xmldb:get-child-collections($collection-source) 
         ! xmldb:move($collection-source || "/" || ., $collection-target),
     xmldb:get-child-resources($collection-source) 
