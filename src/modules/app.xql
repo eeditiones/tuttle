@@ -224,12 +224,14 @@ declare function app:request($request as element(http:request)) {
 };
 
 (:~
- : resolve file path against a base collection
- : $base the absolute DB path to a collection. Assumes no slash at the end
- : $filepath never begins with slash and always points to a resource
-    ("/db", "a/b/c") -> map { "name": "c", "collection": "/db/a/b/"}
+ : Resolve relative file path against a base collection
+ : app:file-to-resource("/db", "a/b/c") -> map { "name": "c", "collection": "/db/a/b/"}
+ :
+ : @param $base     the absolute DB path to a collection; no slash at the end
+ : @param $filepath never begins with slash and always points to a resource
+ : @return a map with name and collection
  :)
-declare function app:file-to-resource($base as xs:string, $filepath as xs:string) as map(*) {
+declare %private function app:file-to-resource($base as xs:string, $filepath as xs:string) as map(*) {
     let $parts := tokenize($filepath, '/')
     let $rel-path := subsequence($parts, 0, count($parts)) (: cut off last part :)
     return map {
