@@ -221,9 +221,8 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
 };
 
 (:~
- : Deploy  Repo 
+ : Deploy Repo from staging collection to its final destination
 :)
-
 declare function api:git-deploy($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
