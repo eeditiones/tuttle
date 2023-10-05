@@ -360,7 +360,14 @@ declare function api:incremental($request as map(*)) as map(*) {
             else (
                 let $write-lock := app:lock-write($config?path, "incremental")
                 let $incremental := $actions?incremental($config)
-                let $errors := some $a in ($incremental?new?*, $incremental?del?*)?2 satisfies not($a)
+
+                (:
+                Check if any of the previous additions or deletions did not succeed
+                Each action is an array with [path, success (, error)]
+                :)
+                let $results := ($incremental?new?*, $incremental?del?*)?2
+                let $errors := some $result in $results satisfies not($result)
+                
                 let $remove-lock := app:lock-remove($config?path)
 
                 return
