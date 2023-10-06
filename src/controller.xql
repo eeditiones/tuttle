@@ -44,7 +44,7 @@ else if ($exist:resource eq 'login') then
     )
 
 (: static HTML page for API documentation should be served directly to make sure it is always accessible :)
-else if ($is-get and $exist:path eq "/api.html" or $exist:path eq "/api.json") then
+else if ($is-get and $exist:path = ("/api.html", "/api.json")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist" />
 
 (: serve static resources :)
