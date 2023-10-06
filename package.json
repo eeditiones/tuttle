@@ -15,6 +15,9 @@
     "url": "https://github.com/eeditiones/tuttle"
   },
   "license": "GPL-3.0",
+  "dependencies": {
+    "@jinntec/fore": "^1.8.0"
+  },
   "devDependencies": {
     "@existdb/gulp-exist": "^5.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.4",
