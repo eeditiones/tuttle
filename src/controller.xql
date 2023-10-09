@@ -51,7 +51,8 @@ else if ($is-get and $exist:path = ("/api.html", "/api.json")) then
 else if ($is-get and matches($exist:path, "^/(css|js|images)/[^/]+\.(css|js(\.map)?|svg|jpg|png)$")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <forward url="{$exist:controller}/resources/{$exist:path}">
-            <set-header name="Cache-Control" value="max-age=31536000"/>
+            <set-header name="Cache-Control" value="max-age=2419200, must-revalidate, stale-while-revalidate=86400"/>
+            <!-- <set-header name="Cache-Control" value="max-age=31536000"/> -->
         </forward>
     </dispatch>
 
