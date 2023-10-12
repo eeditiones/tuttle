@@ -1,14 +1,14 @@
 
-module namespace vcs="http://exist-db.org/apps/tuttle/vcs";
+module namespace vcs="http://e-editiones.org/tuttle/vcs";
 
-import module namespace github="http://exist-db.org/apps/tuttle/github" at "github.xql";
-import module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab" at "gitlab.xql";
+import module namespace github="http://e-editiones.org/tuttle/github" at "github.xql";
+import module namespace gitlab="http://e-editiones.org/tuttle/gitlab" at "gitlab.xql";
 
 
 declare variable $vcs:mappings as map(*) := map {
     "github": map {
         "get-url": github:get-url#1,
-        "clone": github:clone#3,
+        "get-archive": github:get-archive#2,
         "get-last-commit": github:get-last-commit#1,
         "get-commits": github:get-commits#2,
         "get-all-commits": github:get-commits#1,
@@ -18,7 +18,7 @@ declare variable $vcs:mappings as map(*) := map {
     },
     "gitlab": map {
         "get-url": gitlab:get-url#1,
-        "clone": gitlab:clone#3,
+        "get-archive": gitlab:get-archive#2,
         "get-last-commit": gitlab:get-last-commit#1,
         "get-commits": gitlab:get-commits#2,
         "get-all-commits": gitlab:get-commits#1,

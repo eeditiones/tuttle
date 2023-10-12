@@ -1,0 +1,73 @@
+<tuttle>
+  <repos>
+    <collection name="tuttle-sample-data">
+        <!-- optional: make _one_ repository the default
+            for endpoints without {collection}
+        -->
+        <default>true</default>
+
+        <!-- which sercive to connect to -->
+        <type>github</type>
+        <baseurl>https://api.github.com/</baseurl>
+
+        <!-- necessary to provide for GitHub -->
+        <owner>eeditiones</owner>
+        <repo>tuttle-sample-data</repo>
+        
+        <!-- branch to pull from -->
+        <ref>next</ref>
+
+        <!-- authenticate against remote service,
+            can also be read from environment variables -->
+        <token>XXX</token>
+
+        <!-- only necessary if you need the service to call tuttle -->
+        <hookuser>admin</hookuser>
+        <hookpasswd></hookpasswd>
+    </collection>
+    
+   <collection name="tuttle-sample-gitlab">
+        <!-- which sercive to connect to -->
+        <type>gitlab</type>
+        <baseurl>https://gitlab.com/api/v4/</baseurl>
+
+        <!-- this is not needed for Gitlab but can be added for human consumption -->
+        <owner>line-o</owner>
+        <repo>tuttle-sample-data</repo>
+
+        <!-- necessary to provide for Gitlab -->
+        <project-id>50872175</project-id>
+
+        <!-- branch to pull from -->
+        <ref>main</ref>
+
+        <!-- authenticate against remote service,
+            can also be read from environment variables -->
+        <token>XXX</token>
+        
+        <!-- only necessary if you need the service to call tuttle -->
+        <hookuser>admin</hookuser>
+        <hookpasswd></hookpasswd>
+    </collection>
+  </repos>
+
+  <!-- these files will not be extracted from archives and left untouched when cleaning up -->
+  <ignore>
+      <file>existdb.json</file>
+      <file>build.xml</file>
+      <file>README.md</file>
+      <file>.gitignore</file>
+      <file>expath-pkg.xml.tmpl</file>
+      <file>repo.xml.tmpl</file>
+      <file>build.properties.xml</file>
+  </ignore>
+  
+  <!-- prefix, suffix, lock and apikeys can usually be left as-is -->
+  <config prefix="/db/apps/" suffix="-stage" lock="git-lock.xml" apikeys="/db/system/auth/tuttle-token.xml">
+    <!-- 
+      The permissions the deployed data gets assigned, if no expath-pkg.xml is found.
+      The initial setting is safe, but this can and should be adapted to your requirements. 
+    -->
+    <sm user="admin" group="dba" mode="rw-r-----"/>
+  </config>
+</tuttle>

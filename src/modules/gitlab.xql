@@ -1,9 +1,9 @@
 xquery version "3.1";
 
-module namespace gitlab="http://exist-db.org/apps/tuttle/gitlab";
+module namespace gitlab="http://e-editiones.org/tuttle/gitlab";
 
-import module namespace app="http://exist-db.org/apps/tuttle/app" at "app.xql";
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
 
 declare namespace http="http://expath.org/ns/http-client";
 
@@ -40,34 +40,9 @@ declare function gitlab:newer-commits-url($config as map(*), $base as xs:string,
 (:~
  : clone defines Version repo 
  :)
-declare function gitlab:clone($config as map(*), $collection as xs:string, $sha as xs:string) {
-    try {
-        let $zip := gitlab:request(
-            gitlab:repo-url($config) || "/archive.zip?sha=" || $sha, $config?token)
-
-        let $delete-collection :=
-            if (xmldb:collection-available($collection))
-            then xmldb:remove($collection)
-            else ()
-
-        let $create-collection := xmldb:create-collection("/", $collection)
-
-        let $write-sha := app:write-sha($collection,
-            if (exists($sha)) then $sha else gitlab:get-last-commit($config)?sha)
-
-        let $clone := app:extract-archive($zip, $collection)
-
-        return  map { "message" : "success" }
-    }
-    catch * {
-        map {
-            "message": $err:description,
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+declare function gitlab:get-archive($config as map(*), $sha as xs:string) {
+    gitlab:request(
+        gitlab:repo-url($config) || "/archive.zip?sha=" || $sha, $config?token)
 };
 
 (:~
@@ -209,7 +184,7 @@ declare function gitlab:get-changes ($collection-config as map(*)) as map(*) {
 (:~ 
  : Run incremental update on collection in dry mode
  :) 
-declare function gitlab:incremental-dry($config as map(*)) {
+declare function gitlab:incremental-dry($config as map(*)) as map(*) {
     let $changes := gitlab:get-changes($config)
     return map {
         'new': array{ $changes?new },
@@ -220,82 +195,55 @@ declare function gitlab:incremental-dry($config as map(*)) {
 (:~ 
  : Run incremental update on collection
  :)
-declare function gitlab:incremental($config as map(*)) {
+declare function gitlab:incremental($config as map(*)) as map(*) {
     let $sha := gitlab:get-last-commit($config)?sha
     let $changes := gitlab:get-changes($config)
+    let $new := gitlab:incremental-add($config, $changes?new, $sha)
     let $del := gitlab:incremental-delete($config, $changes?del)
-    let $add := gitlab:incremental-add($config, $changes?new, $sha)
     let $writesha := app:write-sha($config?path, $sha)
-    return ($del, $add)
+    return map {
+        'new': array{ $new },
+        'del': array{ $del }
+    }
 };
 
-declare function gitlab:check-signature ($collection as xs:string, $apikey as xs:string) as xs:string {
+declare function gitlab:check-signature ($collection as xs:string, $apikey as xs:string) as xs:boolean {
     request:get-header("X-Gitlab-Token") = $apikey
 };
 
 (:~ 
  : Incremental updates delete files
  :)
-declare %private function gitlab:incremental-delete($config as map(*), $files as xs:string*) {
-    for $resource in $files
-    let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := $config?path || "/" || $resource-path
-    let $resource-filename := xmldb:encode(replace($resource, $resource-path, ""))
-
+declare %private function gitlab:incremental-delete($config as map(*), $files as xs:string*) as array(*)* {
+    for $filepath in $files
     return 
         try {
-            let $remove := xmldb:remove($resource-collection, $resource-filename)
-            let $remove-empty-col := 
-                if (empty(xmldb:get-child-resources($resource-collection)))
-                then xmldb:remove($resource-collection)
-                else ()
-
-            return ()
+            [ $filepath, app:delete-resource($config, $filepath) ]
         }
         catch * {
-            map {
-                "resource": $resource,
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+            [ $filepath, false(), map{
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
+            }]
         }
 };
 
 (:~
  : Incremental update fetch and add files from git
  :)
-declare %private function gitlab:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) {
-    for $resource in $files
-    let $resource-path := tokenize($resource, '[^/]+$')[1]
-    let $resource-collection := $config?path || "/" || $resource-path
-    let $resource-filename := 
-        if ($resource-path = "") then
-            xmldb:encode($resource)
-        else
-            xmldb:encode(replace($resource, $resource-path, ""))
-
-    let $resource-fullpath := $resource-collection || $resource-filename
-
+declare %private function gitlab:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) as array(*)* {
+    for $filepath in $files
     return 
         try {
-            let $data := gitlab:get-blob($config, $resource, $sha)
-            let $collection-check := 
-                if (xmldb:collection-available($resource-collection)) then ()
-                else (
-                    app:mkcol($resource-collection),
-                    app:set-permission($config?collection, $resource-collection, "collection")
-                )
-
-            let $store := xmldb:store($resource-collection, $resource-filename, $data)
-            let $chmod := app:set-permission($config?collection, $resource-fullpath, "resource")
-            return ()
+            [ $filepath,
+                app:add-resource($config, $filepath,
+                    gitlab:get-blob($config, $filepath, $sha))]
         }
         catch * {
-            map {
-                "resource": $resource,
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+            [ $filepath, false(), map{
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
+            }]
         }
 };
 
@@ -304,7 +252,7 @@ declare %private function gitlab:incremental-add($config as map(*), $files as xs
  :)
 
 (: If the response header `x-next-page` has a value, there are commits missing. :)
-declare %private function gitlab:has-next-page($response as element(http:response)) {
+declare %private function gitlab:has-next-page($response as element(http:response)) as xs:boolean {
     let $x-next-page := $response//http:header[@name="x-next-page"]
     return exists($x-next-page/@value) and $x-next-page/@value/string() ne ''
 };

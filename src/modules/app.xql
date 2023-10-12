@@ -1,112 +1,72 @@
 xquery version "3.1";
 
-module namespace app="http://exist-db.org/apps/tuttle/app";
-declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
+module namespace app="http://e-editiones.org/tuttle/app";
 
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
 import module namespace http="http://expath.org/ns/http-client";
 import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace repo="http://exist-db.org/xquery/repo";
 import module namespace sm="http://exist-db.org/xquery/securitymanager";
-import module namespace dbutil="http://exist-db.org/xquery/dbutil";
 
-import module namespace config="http://exist-db.org/apps/tuttle/config" at "config.xql";
+import module namespace collection="http://existsolutions.com/modules/collection" at "collection.xqm";
+
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
+
+declare function app:extract-archive($zip as xs:base64Binary, $collection as xs:string) {
+    compression:unzip($zip, 
+        app:unzip-filter#3, config:ignore(),
+        app:unzip-store#4, $collection)
+};
 
 (:~
  : Unzip helper function
  :)
-declare function app:unzip-store($path as xs:string, $data-type as xs:string, $data as item()?, $param as item()*) {
-    let $archive-root := substring-before($path, '/')
-    let $archive-root-length := string-length($archive-root)
-    let $object := substring-after($path, '/') 
-
-    return 
-        if ($data-type = 'folder') then 
-            let $mkcol := app:mkcol($param, $object)
-            return
-                <entry path="{$object}" data-type="{$data-type}"/>
-        else 
-            let $resource-path := "/" || tokenize($object, '[^/]+$')[1]
-            let $resource-collection := concat($param, $resource-path)
-            let $resource-filename := xmldb:encode(replace($object, $resource-path, ""))
-            return
-                try {
-                    let $collection-check := if (xmldb:collection-available($resource-collection)) then () else app:mkcol($resource-collection)
-                    let $store := xmldb:store($resource-collection, $resource-filename, $data)
-                    return ()
-                }
-                catch * {
-                    map {
-                        "_error": map {
-                        "code": $err:code, "description": $err:description, "value": $err:value, 
-                        "line": $err:line-number, "column": $err:column-number, "module": $err:module
-                    }
-                }
-            }
+declare function app:unzip-store($path as xs:string, $data-type as xs:string, $data as item()?, $base as xs:string) as map(*) {
+    if ($data-type = 'folder') then (
+        let $create := collection:create($base || "/" || substring-after($path, '/'))
+        return map { "path": $path }
+    ) else (
+        try {
+            let $resource := app:file-to-resource($base, substring-after($path, '/'))
+            let $collection-check := collection:create($resource?collection)
+            let $store := xmldb:store($resource?collection, $resource?name, $data)
+            return map { "path": $path }
+        }
+        catch * {
+            map { "path": $path, "error": $err:description }
+        }
+    )
 };
 
 (:~
- : Filter function to blacklist resources
+ : Filter out ignored resources
+ : returning true() _will_ extract the file or folder
  :)
-declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $param as item()*) as xs:boolean { 
-    not(contains($path, config:blacklist()))
+declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $ignore as xs:string*) as xs:boolean { 
+    not(substring-after($path, '/') = $ignore)
 };
 
 (:~
  : Move staging collection to final collection
  :)
-declare function app:move-collections($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
-    let $fullpath-collection-source := $prefix || "/" || $collection-source
-    let $fullpath-collection-target := $prefix || "/" || $collection-target
-
-    return
-        for $child in xmldb:get-child-collections($fullpath-collection-source) 
-            let $fullpath-child-source := $fullpath-collection-source || "/" || $child
-            let $fullpath-child-target := $fullpath-collection-target || "/" 
-            return 
-                xmldb:move($fullpath-child-source, $fullpath-child-target)
-};
-
-(:~
- : Move staging collection to final collection
- :)
-declare function app:move-resources($collection-source as xs:string, $collection-target as xs:string, $prefix as xs:string) {
-    let $fullpath-collection-source := $prefix || "/" || $collection-source
-    let $fullpath-collection-target := $prefix || "/" || $collection-target
-    
-    return
-        for $child in xmldb:get-child-resources($fullpath-collection-source) 
-        return 
-            xmldb:move($fullpath-collection-source, $fullpath-collection-target, $child)
+declare function app:move-collection($collection-source as xs:string, $collection-target as xs:string) {
+    xmldb:get-child-collections($collection-source) 
+        ! xmldb:move($collection-source || "/" || ., $collection-target),
+    xmldb:get-child-resources($collection-source) 
+        ! xmldb:move($collection-source, $collection-target, .)
 };
 
 (:~ 
  : Cleanup destination collection - delete collections from target collection
  :)
-declare function app:cleanup-collection($collection as xs:string, $prefix as xs:string) {
-    let $blacklist := [config:blacklist(), config:lock()]
-    let $fullpath-collection :=  $prefix || "/" || $collection 
-
-    return
-        for $child in xmldb:get-child-collections($fullpath-collection)
-            where not(contains($child, $blacklist))
-                let $fullpath-child := $fullpath-collection || "/" || $child
-                return 
-                    xmldb:remove($fullpath-child)
-};
-
-(:~
- : Cleanup destination collection - delete resources from target collection
- :)
-declare function app:cleanup-resources($collection as xs:string, $prefix as xs:string) {
-    let $blacklist := config:blacklist()
-    let $fullpath-collection :=  $prefix || "/" || $collection 
-
-    return
-        for $child in xmldb:get-child-resources($fullpath-collection)
-            where not(contains($child, $blacklist))
-            return 
-                xmldb:remove($fullpath-collection, $child)
+declare function app:cleanup-collection($collection as xs:string) {
+    let $ignore := (config:ignore(), config:lock())
+    return (
+        xmldb:get-child-collections($collection)[not(.= $ignore)]
+            ! xmldb:remove($collection || "/" || .),
+        xmldb:get-child-resources($collection)[not(.= $ignore)]
+            ! xmldb:remove($collection, .)
+    )
 };
 
 (:~
@@ -136,8 +96,8 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
     try {
         let $collection-prefix := tokenize(config:apikeys(), '[^/]+$')[1]
         let $apikey-resource := xmldb:encode(replace(config:apikeys(), $collection-prefix, ""))
-        let $collection-check := 
-            if (xmldb:collection-available($collection-prefix)) then () else app:mkcol($collection-prefix)
+        let $collection-check := collection:create($collection-prefix)
+
         return 
             if (doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()) then
                 update replace doc(config:apikeys())//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
@@ -164,111 +124,62 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
  : Write lock file
  :)
 declare function app:lock-write($collection as xs:string, $task as xs:string) {
-    try {
+    if (xmldb:collection-available($collection)) then (
         xmldb:store($collection, config:lock(),
             <task><value>{ $task }</value></task>)
-    }
-    catch * {
-        map {
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+    ) else ()
 };
 
 (:~
  : Delete lock file
  :)
 declare function app:lock-remove($collection as xs:string) {
-    try {
+    if (doc-available($collection || "/" || config:lock())) then (
         xmldb:remove($collection, config:lock())
-    }
-    catch * {
-        map {
-            "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
-    }
+    ) else ()
 };
 
 (:~
-: Set recursive permissions to whole collection 
-:)
+ : Set permissions to collection recursively 
+ :)
 declare function app:set-permission($collection as xs:string) {
-    let $collection-uri := config:prefix() || "/" || $collection
+    let $permissions := app:get-permissions($collection)
+    let $callback := app:set-permission(?, ?, $permissions)
 
-    return 
-        dbutil:scan(xs:anyURI($collection-uri), function($collection-url, $resource) {
-        let $path := ($resource, $collection-url)[1]
-        return (
-            if ($resource) then
-                    app:set-permission($collection, $path, "resource")
-                else
-                    app:set-permission($collection, $path, "collection")
-            )
-        })
+    return
+        collection:scan($collection, $callback)
+};
+
+declare function app:get-permissions ($collection as xs:string) {
+    if (doc-available($collection || "/repo.xml")) then (
+        let $repo := doc($collection || "/repo.xml")//repo:permissions
+        return map {
+            "user":  $repo/@user/string(),
+            "group":  $repo/@group/string(),
+            "mode":  $repo/@mode/string()
+        }
+    ) else (
+        config:sm()
+    )
 };
 
 (:~
-: Set permissions for $path 
-: $type: 'collection' or 'resource'
+: Set permissions for either a collection or resource
 :)
-declare function app:set-permission($collection as xs:string, $path as xs:string, $type as xs:string) {
-    let $collection-uri := config:prefix() || "/" || $collection
-    let $repo := doc(concat($collection-uri, "/repo.xml"))/repo:meta/repo:permissions
-
-    return (
-        if (exists($repo)) then (
-            sm:chown($path, $repo/@user/string()),
-            sm:chgrp($path, $repo/@group/string()),
-            if ($type = "resource") then
-                    sm:chmod($path, $repo/@mode/string())
-                else
-                    sm:chmod($path, replace($repo/@mode/string(), "(..).(..).(..).", "$1x$2x$3x"))
+declare function app:set-permission($collection as xs:string, $resource as xs:string?, $permissions as map(*)) {
+    if (exists($resource)) then (
+        xs:anyURI($resource) ! (
+            sm:chown(., $permissions?user),
+            sm:chgrp(., $permissions?group),
+            sm:chmod(., $permissions?mode)
         )
-        else (
-            sm:chown($path, config:sm()?user),
-            sm:chgrp($path, config:sm()?group),
-            if ($type = "resource") then
-                    sm:chmod($path, config:sm()?mode)
-                else
-                    sm:chmod($path, replace(config:sm()?mode, "(..).(..).(..).", "$1x$2x$3x")))
+    ) else (
+        xs:anyURI($collection) ! (
+            sm:chown(., $permissions?user),
+            sm:chgrp(., $permissions?group),
+            sm:chmod(., replace($permissions?mode, "(r.)-", "$1x"))
         )
-};
-
-(:~
- : Helper function of unzip:mkcol() 
-:)
-declare function app:mkcol-recursive($collection, $components) as xs:string* {
-    if (exists($components)) then
-        let $newColl := concat($collection, "/", $components[1])
-        return (
-            xmldb:create-collection($collection, $components[1]),
-            if ($components[2]) then 
-                app:mkcol-recursive($newColl, subsequence($components, 2))
-            else ()
-        )
-    else ()
-};
-
-(:~
- : Helper function to recursively create a collection hierarchy
- :)
-declare function app:mkcol($collection, $path) as xs:string* {
-    app:mkcol-recursive($collection,
-        tokenize($path, "/") ! xmldb:encode(.))
-};
-
-(:~
- : Helper function to recursively create a collection hierarchy
- :)
-declare function app:mkcol($path) as xs:string* {
-    app:mkcol('/db',
-        substring-after($path, "/db/"))
+    )
 };
 
 (:~
@@ -312,6 +223,48 @@ declare function app:request($request as element(http:request)) {
         else $response
 };
 
-declare function app:extract-archive($zip, $collection as xs:string) {
-    compression:unzip($zip, app:unzip-filter#3, (), app:unzip-store#4, $collection)
+(:~
+ : Resolve relative file path against a base collection
+ : app:file-to-resource("/db", "a/b/c") -> map { "name": "c", "collection": "/db/a/b/"}
+ :
+ : @param $base     the absolute DB path to a collection; no slash at the end
+ : @param $filepath never begins with slash and always points to a resource
+ : @return a map with name and collection
+ :)
+declare %private function app:file-to-resource($base as xs:string, $filepath as xs:string) as map(*) {
+    let $parts := tokenize($filepath, '/')
+    let $rel-path := subsequence($parts, 0, count($parts)) (: cut off last part :)
+    return map {
+        "name": xmldb:encode($parts[last()]),
+        "collection": string-join(($base, $rel-path), "/") || "/"
+    }
+};
+
+declare function app:delete-resource($config as map(*), $filepath as xs:string) as xs:boolean {
+    let $resource := app:file-to-resource($config?path, $filepath)
+    let $remove := xmldb:remove($resource?collection, $resource?name)
+    let $remove-empty-col := 
+        if (empty(xmldb:get-child-resources($resource?collection))) then (
+            xmldb:remove($resource?collection)
+        ) else ()
+
+    return true()
+};
+
+(:~
+ : Incremental update fetch and add files from git
+ :)
+declare function app:add-resource($config as map(*), $filepath as xs:string, $data as item()) as xs:boolean {
+    let $resource := app:file-to-resource($config?path, $filepath)
+    let $permissions := app:get-permissions($config?path)
+    let $collection-check := 
+        if (xmldb:collection-available($resource?collection)) then ()
+        else (
+            collection:create($resource?collection),
+            app:set-permission($resource?collection, (), $permissions)
+        )
+
+    let $store := xmldb:store($resource?collection, $resource?name, $data)
+    let $chmod := app:set-permission($resource?collection, $store, $permissions)
+    return true()
 };
