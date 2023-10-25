@@ -58,6 +58,8 @@ exports["watch:tmpl"] = watchTemplates
 const fore = [
     "node_modules/@jinntec/fore/dist/fore.js",
     "node_modules/@jinntec/fore/dist/fore.js.map",
+    "node_modules/@jinntec/fore/dist/fore-dev.js",
+    "node_modules/@jinntec/fore/dist/fore-dev.js.map",
 ]
 
 function copyFore() {

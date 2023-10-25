@@ -3,8 +3,11 @@ xquery version "3.1";
 declare namespace api="http://exist-db.org/apps/tuttle/api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
+import module namespace auth="http://eeditiones.org/xquery/auth" at "auth.xqm";
+
 import module namespace roaster="http://e-editiones.org/roaster";
 import module namespace rutil="http://e-editiones.org/roaster/util";
+import module namespace rauth="http://e-editiones.org/roaster/auth";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
 import module namespace compression="http://exist-db.org/xquery/compression";
@@ -19,6 +22,53 @@ import module namespace collection="http://existsolutions.com/modules/collection
  : list of definition files to use
  :)
 declare variable $api:definitions := ("api.json");
+
+declare function api:login($request as map(*)) {
+    (: login-domain must be configured! :)
+    let $login-domain := rauth:login-domain($request?spec)
+
+    let $user := auth:login($request?body//user, $request?body//password, map {
+        'domain': $login-domain,
+        'asDba': true()
+    })
+
+    return
+        if (exists($user))
+        then
+            element data {
+                element user { $user },
+                element groups { sm:get-user-groups($user) },
+                element dba { sm:is-dba($user) }
+                (: , :)
+                (: "domain": $login-domain :)
+            }
+        else
+            error($errors:UNAUTHORIZED, "Wrong user or password", map {
+                "user": $user,
+                "domain": $login-domain
+            })
+};
+
+declare function api:logout($request as map(*)) {
+    (: login-domain must be configured! :)
+    let $login-domain := rauth:login-domain($request?spec)
+
+    let $login := auth:logout(map {
+        'domain': $login-domain,
+        "asDBA": true()
+    })
+
+    let $user := request:get-attribute($login-domain || ".user")
+    (: Work-around for the actual login request  
+     : It is possible that the session is not yet ready 
+     : and sm:id() still reports "guest" as real user
+     :)
+    let $success := empty($user)
+    return map {
+        "success": $success,
+        "message": if ($success) then "logged out" else "problem"
+    }
+};
 
 (:~
  : Post git status 
@@ -561,4 +611,33 @@ declare function api:lookup ($name as xs:string) {
     function-lookup(xs:QName($name), 1)
 };
 
-roaster:route($api:definitions, api:lookup#1)
+declare variable $api:use := (
+    (:
+     : Define authentication/authorization middleware 
+     : with a custom authentication strategy
+     : 
+     : All securitySchemes in any api definition that is
+     : included MUST have an entry in the map passed to
+     : auth:use-authorization().
+     : Otherwise the router will throw an error. 
+     :)
+    rauth:use-authorization(map {
+        "cookieAuth": api:use-cookie-auth#1,
+        "basicAuth": rauth:use-basic-auth#1
+    })
+);
+
+declare function api:use-cookie-auth ($request as map(*)) as map(*)? {
+    let $domain := rauth:login-domain($request?spec)
+    let $cookie := request:get-cookie-value($domain)
+    let $user := auth:get-credentials($cookie)
+
+    return (
+        util:log("info", ("UsER: ", $user)),
+        if (exists($user))
+        then rutil:getDBUser()
+        else ()
+    )
+};
+
+roaster:route($api:definitions, api:lookup#1, $api:use)

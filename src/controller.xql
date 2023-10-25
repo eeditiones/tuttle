@@ -1,5 +1,4 @@
 xquery version "3.0";
-import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
 
 declare variable $exist:path external;
 declare variable $exist:resource external;
@@ -20,28 +19,6 @@ else if ($is-get and $exist:path eq "/") then
             <set-header name="Content-Type" value="text/html"/>
         </forward>
     </dispatch>
-
-else if ($exist:resource eq 'login') then
-    let $loggedIn := login:set-user("org.exist.login", (), false())
-    let $user := request:get-attribute("org.exist.login.user")
-    return (
-        util:declare-option("exist:serialize", "method=json"),
-        try {
-            <status xmlns:json="http://www.json.org">
-                <user>{$user}</user>
-                {
-                    if ($user) then (
-                        for $item in sm:get-user-groups($user) return <groups json:array="true">{$item}</groups>,
-                        <dba>{sm:is-dba($user)}</dba>
-                    ) else
-                        ()
-                }
-            </status>
-        } catch * {
-            response:set-status-code(401),
-            <status>{$err:description}</status>
-        }
-    )
 
 (: static HTML page for API documentation should be served directly to make sure it is always accessible :)
 else if ($is-get and $exist:path = ("/api.html", "/api.json")) then

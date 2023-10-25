@@ -16,11 +16,15 @@
             <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
     </svg></a>
     <style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
-    <div class="wrapper">
 
-    <h1><img class="tuttle" src="images/HPTuttle-1866.png"></img>
-        Tuttle Git Dashboard<a href="api.html" target="_blank"><small class="api">API</small></a></h1>
-
+    <header class="center-l">
+        <img class="tuttle" src="images/HPTuttle-1866.png" />
+        <section>
+            <h1>Tuttle Dashboard</h1>
+            <h2 class="tagline">Keep collections in sync with Git remotes</h2>
+        </section>
+    </header>
+    <main class="center-l">
     <fx-fore>
         <!--
         This handler could be used later to force re-login when returning to this page.
@@ -28,7 +32,7 @@
             <fx-message>got focus</fx-message>
         </fx-action>
         -->
-        <fx-send submission="config" event="model-construct-done"></fx-send>
+        <fx-send submission="status" event="model-construct-done"></fx-send>
 
         <fx-model>
 
@@ -46,28 +50,35 @@
                     <password></password>
                 </data>
             </fx-instance>
+
             <fx-instance id="vars">
                 <data>
                     <inprogress></inprogress>
                     <loaded></loaded>
+                    <authorized></authorized>
                 </data>
             </fx-instance>
 
             <fx-submission id="login"
                            ref="instance('auth')"
-                           method="urlencoded-post"
+                           method="post"
                            url="login"
-                           replace="none">
-                <fx-header name="Authorization" value="'Basic ' || local:encode(instance('auth')/user || ':' || instance('auth')/password)"></fx-header>
+                           replace="none"
+                           serialization="xml">
+                <fx-header name="Accept" value="'application/xml'"></fx-header>
 
                 <fx-action event="submit-done">
-                    <fx-send submission="config"></fx-send>
+                    <fx-setvalue ref="instance('vars')/authorized">authorized</fx-setvalue>
+                    <fx-send submission="status"></fx-send>
                 </fx-action>
 
-                <fx-message event="submit-error">Login failed</fx-message>
+                <fx-action event="submit-error">
+                    <fx-setvalue ref="instance('vars')/authorized">unauthorized</fx-setvalue>
+                    <fx-message>Login failed</fx-message>
+                </fx-action>
             </fx-submission>
 
-            <fx-submission id="config"
+            <fx-submission id="status"
                            method="get"
                            replace="instance"
                            instance="default"
@@ -77,12 +88,12 @@
 
                 <fx-action event="submit-done">
                     <fx-setvalue ref="instance('vars')/loaded">loaded</fx-setvalue>
-                    <fx-toggle case="repos"></fx-toggle>
+                    <fx-setvalue ref="instance('vars')/authorized">authorized</fx-setvalue>
                 </fx-action>
 
                 <fx-action event="submit-error">
-                    <fx-setvalue ref="instance('vars')/loaded">loaded</fx-setvalue>
-                    <fx-toggle case="loginpage"></fx-toggle>
+                    <!-- <fx-setvalue ref="instance('vars')/loaded">loaded</fx-setvalue> -->
+                    <fx-setvalue ref="instance('vars')/authorized">unauthorized</fx-setvalue>
                 </fx-action>
             </fx-submission>
 
@@ -115,7 +126,7 @@
                 <fx-action event="submit-done">
                     <fx-message if="instance('response')?message = 'success'">Data deployed to database</fx-message>
                     <fx-message if="instance('response')?message = 'no expath-pkg.xml or repo.xml in repo'">No expath-pkg.xml or repo.xml in repo</fx-message>
-                    <fx-send submission="config"></fx-send>
+                    <fx-send submission="status"></fx-send>
                 </fx-action>
 
 
@@ -135,7 +146,7 @@
                 <fx-action event="submit-done">
                     <fx-message>incremental update done</fx-message>
                     <fx-setvalue ref="instance('vars')/inprogress"></fx-setvalue>
-                    <fx-send submission="config"></fx-send>
+                    <fx-send submission="status"></fx-send>
                 </fx-action>
                 <!--                <fx-setvalue event="submit-error"></fx-setvalue>-->
             </fx-submission>
@@ -146,8 +157,7 @@
 
         </fx-model>
 
-        <div class="overlay {instance('vars')/loaded} {instance('vars')/inprogress}">
-            <!--            <span class="loader-26"></span>-->
+        <div class="overlay {instance('vars')/loaded} {instance('vars')/inprogress} {instance('vars')/authorized}">
             <div class="wrap-overlay">
                 <img src="images/Git_icon.svg" class="icon git"></img>
                 <div class="arrow">
@@ -157,10 +167,9 @@
                 </div>
                 <img src="images/x.svg" class="icon exist"/>
             </div>
-        </div>
-        <fx-switch class="{instance('vars')/loaded}">
-            <fx-case id="loginpage">
+            <div class="login-overlay">
                 <section class="login">
+                    <h2>Login</h2>
                     <fx-control ref="instance('auth')/user" update-event="enter">
                         <label>User</label>
                         <input type="text" autofocus="autofocus" autocomplete="false" />
@@ -169,47 +178,51 @@
                         <label>Password</label>
                         <input type="password" />
                     </fx-control>
-
+    
                     <fx-trigger>
                         <button>Login</button>
                         <fx-send submission="login"></fx-send>
                     </fx-trigger>
                 </section>
-            </fx-case>
-            <fx-case id="repos">
-
-                <fx-group>
-                    <a class="docs" href="https://eeditiones.github.io/tuttle-doc" target="_blank">Documentation</a>
-                    <h2>Git to DB<span class="small">import data from Git into eXist-db</span></h2>
-                    <h3>Git Repositories</h3>
-                    <fx-repeat id="list" ref="repos/repo">
-                        <template>
-                            <div class="repo {@status}">
-                                <span class="type {@type}"></span>
-                                <span class="message">{@message}</span>
-                                <span class="repoName"><a href="{@url}" target="_blank">{./@collection}</a></span>
-                                <fx-trigger>
-                                    <button>
-                                        <span>full</span>
-                                    </button>
-                                    <fx-confirm message="This action might be time-consuming. Do you want to proceed?">
-                                        <fx-send submission="fetch"></fx-send>
-                                    </fx-confirm>
-                                </fx-trigger>
-                                <fx-trigger ref="@status">
-                                    <button>
-                                        <span>Incremental</span>
-                                    </button>
-                                    <fx-send submission="update"></fx-send>
-                                </fx-trigger>
-                            </div>
-                        </template>
-                    </fx-repeat>
-                </fx-group>
-            </fx-case>
-        </fx-switch>
+            </div>
+        </div>
+        <div id="repos">
+            <fx-group>
+                <h2>Repositories</h2>
+                <fx-repeat id="list" ref="repos/repo">
+                    <template>
+                        <div class="repo {@status}">
+                            <span class="type {@type}"></span>
+                            <span class="message">{@message}</span>
+                            <span class="repoName"><a href="{@url}" target="_blank">{@collection}</a></span>
+                            <fx-trigger>
+                                <button>
+                                    <span>Checkout</span>
+                                </button>
+                                <fx-confirm message="This action might be time-consuming. Do you want to proceed?">
+                                    <fx-send submission="fetch"></fx-send>
+                                </fx-confirm>
+                            </fx-trigger>
+                            <fx-trigger ref="@status">
+                                <button>
+                                    <span>Update</span>
+                                </button>
+                                <fx-send submission="update"></fx-send>
+                            </fx-trigger>
+                        </div>
+                    </template>
+                </fx-repeat>
+            </fx-group>
+        </div>
+        <fx-inspector></fx-inspector>
     </fx-fore>
-    <script type="module" src="js/fore.js"></script>
-</div>
+    </main>
+    <footer>
+        <section class="center-l help">
+            <a href="https://eeditiones.github.io/tuttle-doc" target="_blank">Documentation</a>
+            <a href="api.html" target="_blank">API</a>
+        </section>
+    </footer>
+    <script type="module" src="js/fore-dev.js"></script>
 </body>
 </html>
