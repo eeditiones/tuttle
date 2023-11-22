@@ -103,7 +103,7 @@ declare function api:get-hash($request as map(*)) as map(*) {
         let $last-remote-commit := $actions?get-last-commit($collection-config)
 
         return map {
-            "remote-hash": $last-remote-commit?sha,
+            "remote-hash": app:shorten-sha($last-remote-commit?sha),
             "local-hash": $collection-config?deployed,
             "local-staging-hash": doc($collection-staging)/hash/value/text()
         }
