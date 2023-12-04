@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        exist-version: [release, 5.5.1]
+        exist-version: [release, 5.5.1, 5.2.0]
         experimental: [false]
         include:
           - exist-version: latest
