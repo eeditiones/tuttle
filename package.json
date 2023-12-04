@@ -6,9 +6,7 @@
     "start": "gulp",
     "test": "gulp install && mocha --exit",
     "test:watch": "mocha --watch",
-    "test:build": "gulp test:install",
-    "build": "gulp build",
-    "build:all": "gulp build && gulp test:build",
+    "build": "gulp xar",
     "deploy": "gulp install",
     "copy": "gulp copyStatic"
   },
