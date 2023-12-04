@@ -29,7 +29,7 @@
             "get": {
                 "summary": "Fetch git repo to staging collection",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:git-pull",
                 "parameters": [
@@ -71,7 +71,7 @@
             "post": {
                 "summary": "Deploy repo to final collection",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:git-deploy",
                 "parameters": [
@@ -107,7 +107,7 @@
             "get": {
                 "summary": "Fetch git repo to staging collection",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:git-pull-default",
                 "parameters": [
@@ -141,7 +141,7 @@
             "post": {
                 "summary": "Deploy repo to final collection",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:git-deploy",
                 "responses": {
@@ -167,7 +167,7 @@
             "post": {
                 "summary": "Trigger incremental update",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:incremental",
                 "parameters": [
@@ -215,7 +215,7 @@
             "post": {
                 "summary": "Trigger incremental update",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:incremental",
                 "parameters": [
@@ -255,7 +255,7 @@
             "get": {
                 "summary": "Get remote and local hash",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:get-hash",
                 "parameters": [
@@ -299,7 +299,7 @@
             "get": {
                 "summary": "Get remote and local hash",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:get-hash",
                 "responses": {
@@ -333,7 +333,7 @@
             "get": {
                 "summary": "Get commits",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:get-commits",
                 "parameters": [
@@ -373,7 +373,7 @@
             "get": {
                 "summary": "Get commits",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:get-commits-default",
                 "parameters": [
@@ -461,7 +461,7 @@
             "get": {
                 "summary": "Generate API-Webhook-Keys",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:api-keygen",
                 "parameters": [
@@ -497,7 +497,7 @@
             "get": {
                 "summary": "Generate API-Webhook-Keys",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:api-keygen",
                 "responses": {
@@ -523,7 +523,7 @@
             "get": {
                 "summary": "Get Tuttle configuration",
                 "x-constraints": {
-                    "user": "admin"
+                    "groups": ["dba"]
                 },
                 "operationId": "api:get-status",
                 "responses": {
