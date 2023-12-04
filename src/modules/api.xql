@@ -413,6 +413,8 @@ declare function api:hook($request as map(*)) as map(*) {
         let $config := api:get-collection-config($request?parameters?collection)
         let $apikey := doc(config:apikeys())//apikeys/collection[name = $config?collection]/key/string()
         let $lockfile := $config?path || "/" || config:lock()
+        let $actions := vcs:get-actions($config?type)
+
         return
             if (empty($apikey)) then (
                 map { "message": "apikey does not exist" }
@@ -430,7 +432,7 @@ declare function api:hook($request as map(*)) as map(*) {
 
                 let $incremental := $actions?incremental($config)
 
-                let $remove-lock := app:lock-remove($collection-path)
+                let $remove-lock := app:lock-remove($config?path)
 
                 return
                     map {
