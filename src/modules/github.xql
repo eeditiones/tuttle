@@ -159,8 +159,9 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         then $changes
         else map:put($changes, "new", ($changes?new, $next?filename))
     case "renamed" return
-        github:remove-or-ignore($changes, $next?previous_filename)
-        => map:put("new", ($changes?new, $next?filename))
+        github:remove-or-ignore(
+            map:put($changes, "new", ($changes?new, $next?filename)),
+            $next?previous_filename)
     case "removed" return
         github:remove-or-ignore($changes, $next?filename)
     default return

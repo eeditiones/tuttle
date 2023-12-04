@@ -25,19 +25,23 @@ declare variable $api:definitions := ("api.json");
  :)
 declare function api:get-status($request as map(*)) {
     if (contains(request:get-header('Accept'), 'application/json'))
-    then map {
-        'default': config:default-collection(),
-        'repos': array {
-            config:list-collections() ! api:collection-info(.)
+    then 
+        map {
+            'default': config:default-collection(),
+            'repos': array {
+                for $collection-info in config:list-collections()
+                return
+                    api:collection-info($collection-info)
+            }
         }
-    }
     else
         <tuttle>
             <default>{config:default-collection()}</default>
             <repos>{
-                config:list-collections()
-                ! api:collection-info(.)
-                ! api:repo-xml(.)
+                for $collection-info in config:list-collections()
+                return
+                    api:repo-xml(
+                        api:collection-info($collection-info))
             }</repos>
         </tuttle>
 };
@@ -53,7 +57,9 @@ declare function api:repo-xml ($info as map(*)) as element(repo) {
 declare function api:collection-info ($collection as xs:string) as map(*) {
     let $collection-config := api:get-collection-config($collection)
     (: hide passwords and tokens :)
-    let $masked := map:remove($collection-config, ("hookpasswd", "token"))
+    let $masked :=
+        map:remove(
+            map:remove($collection-config, "hookpasswd"), "token")
 
     return
         try {
