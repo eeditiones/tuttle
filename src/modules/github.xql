@@ -120,8 +120,21 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
         return github:get-commit-files($collection-config, $sha)?*
 
     (: aggregate file changes :)
-    return fold-left($changes, map{}, github:aggregate-filechanges#2)
-
+    let $aggregated := fold-left($changes, map{}, github:aggregate-filechanges#2)
+    let $filtered := fold-left($aggregated?new, map{}, function($res, $next) {
+        if (
+            $next = ("build.xml", "repo.xml", "expath-pkg.xml")
+            or starts-with($next, ".git")
+            or ends-with($next, ".xconf")
+        )
+        then map:put($res, 'ignored', ($res?ignored, $next))
+        else map:put($res, 'new', ($res?new, $next))
+    })
+    return map {
+        "del": $aggregated?del,
+        "new": $filtered?new,
+        "ignored": $filtered?ignored
+    }
 };
 
 (:~
@@ -137,14 +150,18 @@ declare function github:remove-or-ignore ($changes as map(*), $filename as xs:st
     else map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
 };
 
+(: unhandled cases: "copied", "changed", "unchanged" :)
 declare function github:aggregate-filechanges ($changes as map(*), $next as map(*)) as map(*) {
     switch ($next?status)
     case "added" (: fall-through :)
     case "modified" return
-        map:put($changes, "new", ($changes?new, $next?filename))
+        if ($next?filename = $changes?new) (: file already in new list :)
+        then $changes
+        else map:put($changes, "new", ($changes?new, $next?filename))
     case "renamed" return
-        github:remove-or-ignore($changes, $next?previous_filename)
-        => map:put("new", ($changes?new, $next?filename))
+        github:remove-or-ignore(
+            map:put($changes, "new", ($changes?new, $next?filename)),
+            $next?previous_filename)
     case "removed" return
         github:remove-or-ignore($changes, $next?filename)
     default return
@@ -158,7 +175,8 @@ declare function github:incremental-dry($config as map(*)) {
     let $changes := github:get-changes($config)
     return map {
         'new': array{ $changes?new },
-        'del': array{ $changes?del }
+        'del': array{ $changes?del },
+        'ignored': array{ $changes?ignored }
     }
 };
 

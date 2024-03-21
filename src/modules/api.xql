@@ -25,19 +25,23 @@ declare variable $api:definitions := ("api.json");
  :)
 declare function api:get-status($request as map(*)) {
     if (contains(request:get-header('Accept'), 'application/json'))
-    then map {
-        'default': config:default-collection(),
-        'repos': array {
-            config:list-collections() ! api:collection-info(.)
+    then 
+        map {
+            'default': config:default-collection(),
+            'repos': array {
+                for $collection-info in config:list-collections()
+                return
+                    api:collection-info($collection-info)
+            }
         }
-    }
     else
         <tuttle>
             <default>{config:default-collection()}</default>
             <repos>{
-                config:list-collections()
-                ! api:collection-info(.)
-                ! api:repo-xml(.)
+                for $collection-info in config:list-collections()
+                return
+                    api:repo-xml(
+                        api:collection-info($collection-info))
             }</repos>
         </tuttle>
 };
@@ -53,7 +57,9 @@ declare function api:repo-xml ($info as map(*)) as element(repo) {
 declare function api:collection-info ($collection as xs:string) as map(*) {
     let $collection-config := api:get-collection-config($collection)
     (: hide passwords and tokens :)
-    let $masked := map:remove($collection-config, ("hookpasswd", "token"))
+    let $masked :=
+        map:remove(
+            map:remove($collection-config, "hookpasswd"), "token")
 
     return
         try {
@@ -103,7 +109,7 @@ declare function api:get-hash($request as map(*)) as map(*) {
         let $last-remote-commit := $actions?get-last-commit($collection-config)
 
         return map {
-            "remote-hash": $last-remote-commit?sha,
+            "remote-hash": app:shorten-sha($last-remote-commit?sha),
             "local-hash": $collection-config?deployed,
             "local-staging-hash": doc($collection-staging)/hash/value/text()
         }
@@ -413,6 +419,8 @@ declare function api:hook($request as map(*)) as map(*) {
         let $config := api:get-collection-config($request?parameters?collection)
         let $apikey := doc(config:apikeys())//apikeys/collection[name = $config?collection]/key/string()
         let $lockfile := $config?path || "/" || config:lock()
+        let $actions := vcs:get-actions($config?type)
+
         return
             if (empty($apikey)) then (
                 map { "message": "apikey does not exist" }
@@ -430,7 +438,7 @@ declare function api:hook($request as map(*)) as map(*) {
 
                 let $incremental := $actions?incremental($config)
 
-                let $remove-lock := app:lock-remove($collection-path)
+                let $remove-lock := app:lock-remove($config?path)
 
                 return
                     map {

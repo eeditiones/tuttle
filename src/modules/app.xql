@@ -151,7 +151,10 @@ declare function app:set-permission($collection as xs:string) {
 };
 
 declare function app:get-permissions ($collection as xs:string) {
-    if (doc-available($collection || "/repo.xml")) then (
+    if (
+        doc-available($collection || "/repo.xml") and
+        exists(doc($collection || "/repo.xml")//repo:permissions)
+    ) then (
         let $repo := doc($collection || "/repo.xml")//repo:permissions
         return map {
             "user":  $repo/@user/string(),
