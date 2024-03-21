@@ -19,7 +19,7 @@
             },
             "cookieAuth": {
                 "type": "apiKey",
-                "name": "eeditiones.org.login",
+                "name": "org.exist.login",
                 "in": "cookie"
             }
         }
