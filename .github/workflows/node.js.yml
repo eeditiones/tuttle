@@ -21,9 +21,10 @@ jobs:
         exist-version: [release, 5.5.1]
         experimental: [false]
         include:
-          - exist-version: [latest, 5.2.0]
+          - exist-version: latest
             experimental: true
-            
+          - exist-version: 5.2.0
+            experimental: true
     services:
       # Label used to access the service container
       exist:
