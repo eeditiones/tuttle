@@ -33,7 +33,7 @@ declare function github:commit-ref-url($config as map(*), $per-page as xs:intege
  : Clone defines Version repo
  :)
 declare function github:get-archive($config as map(*), $sha as xs:string) as xs:base64Binary {
-    github:request(
+    github:download-file(
         github:repo-url($config) || "/zipball/" || $sha, $config?token)
 };
 
@@ -206,14 +206,35 @@ declare function github:get-commit-files($config as map(*), $sha as xs:string) a
     return $commit?files
 };
 
+(: TODO: make raw url configurable :)
+declare variable $github:raw-usercontent-endpoint := "https://raw.githubusercontent.com";
+
 (:~
  : Get blob of a file
+ : https://raw.githubusercontent.com/<owner>/<repo>/<sha>/<path>
  :)
-declare function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) as xs:string {
-    let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
-    let $content := github:request-json($blob-url, $config?token)?content
-
-    return util:base64-decode($content)
+declare %private function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
+    if (not(starts-with($config?base-url, "https://api.github.com"))) then (
+        (: for GitHub enterprise we have to query for the download url, this might return the contents directly :) 
+        let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
+        let $json := github:request-json($blob-url, $config?token)
+        let $content := $json?content
+    
+        return
+            if ($json?content = "") (: endpoint did not return base64 encoded contents :)
+            then github:download-file($json?download_url, $config?token)
+            else util:base64-decode($content)
+    ) else (
+        (: for github.com we can construct the download url :)
+        let $blob-url := string-join((
+            $github:raw-usercontent-endpoint,
+            $config?owner,
+            $config?repo,
+            $sha,
+            escape-html-uri($filename)
+        ), "/")
+        return github:download-file($blob-url, $config?token)
+    )
 };
 
 (:~
@@ -282,8 +303,14 @@ declare %private function github:has-next-page($response as element(http:respons
     return contains($link-header, 'rel="next"')
 };
 
+(: api calls :)
 declare %private function github:request-json($url as xs:string, $token as xs:string?) {
-    let $response := app:request-json(github:build-request($url, $token))
+    let $response := 
+        app:request-json(
+            github:build-request($url, (
+                <http:header name="Accept" value="application/vnd.github.v3+json" />,
+                github:auth-header($token))
+            ))
 
     return (
         if (github:has-next-page($response[1]))
@@ -293,17 +320,20 @@ declare %private function github:request-json($url as xs:string, $token as xs:st
     )
 };
 
-declare %private function github:request($url as xs:string, $token as xs:string?) {
-    app:request(github:build-request($url, $token))[2]
+(: raw file downloads :)
+declare %private function github:download-file ($url as xs:string, $token as xs:string?) {
+     app:request(
+        github:build-request($url,
+            github:auth-header($token)))[2]
 };
 
-declare %private function github:build-request($url as xs:string, $token as xs:string?) as element(http:request) {
-    <http:request http-version="1.1" href="{$url}" method="get">
-        <http:header name="Accept" value="application/vnd.github.v3+json" />
-        {
-            if (empty($token) or $token = "")
-            then ()
-            else <http:header name="Authorization" value="token {$token}"/>
-        }
-    </http:request>
+declare %private function github:auth-header($token as xs:string?) as element(http:header)? {
+    if (empty($token) or $token = "")
+    then ()
+    else <http:header name="Authorization" value="token {$token}"/>
 };
+
+declare %private function github:build-request($url as xs:string, $headers as element(http:header)*) as element(http:request) {
+    <http:request http-version="1.1" href="{$url}" method="get">{ $headers }</http:request>
+};
+
