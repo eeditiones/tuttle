@@ -42,7 +42,7 @@ declare function github:get-archive($config as map(*), $sha as xs:string) as xs:
  :)
 declare function github:get-last-commit($config as map(*)) as map(*) {
     array:head(
-        github:request-json(
+        github:request-json-ignore-pages(
             github:commit-ref-url($config, 1), $config?token))
 };
 
@@ -90,7 +90,7 @@ declare %private function github:only-commit-shas ($commit-info as map(*)) as ar
  : Get commits in full
  :)
 declare function github:get-raw-commits($config as map(*), $count as xs:integer) as array(*)? {
-    github:request-json(
+    github:request-json-ignore-pages(
         github:commit-ref-url($config, $count), $config?token)
 };
 
@@ -201,9 +201,9 @@ declare function github:incremental($config as map(*)) {
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     let $url := github:repo-url($config) || "/commits/"  || $sha
-    let $commit := github:request-json($url, $config?token)
+    let $commit := github:request-json-all-pages($url, $config?token, ())
 
-    return $commit?files
+    return array { $commit?files?* }
 };
 
 (: TODO: make raw url configurable :)
@@ -297,27 +297,83 @@ declare %private function github:incremental-add($config as map(*), $files as xs
  : Github request
  :)
 
-(: If the response header `link` contains rel="next", there are commits missing. :)
+(:~
+ : If the response header `link` contains rel="next", there are commits missing.
+  <hc:header
+    name="link"
+    value="&lt;https://api.github.com/repositories/11208105/commits/5b4d5b48784fc9535aed38d60082f5d60dbb9f1a?page=2&gt;; rel=&#34;next&#34;, &lt;https://api.github.com/repositories/11208105/commits/5b4d5b48784fc9535aed38d60082f5d60dbb9f1a?page=3&gt;; rel=&#34;last&#34;"/>
+ :)
 declare %private function github:has-next-page($response as element(http:response)) {
-    let $link-header := $response//http:header/@name[.="link"]
-    return contains($link-header, 'rel="next"')
+    exists($response/http:header[@name="link"])
 };
+
+declare %private function github:parse-link-header($link-header as xs:string) as map(*) {
+    map:merge(
+        tokenize($link-header, ', ')
+        ! array { tokenize(., '; ') }
+        ! map { 
+            replace(?2, "rel=""(.*?)""", "$1") : substring(?1, 2, string-length(?1) - 2)
+        }
+    )
+};
+
+declare variable $github:accept-header := <http:header name="Accept" value="application/vnd.github+json" />;
 
 (: api calls :)
 declare %private function github:request-json($url as xs:string, $token as xs:string?) {
-    let $response := 
+    let $response :=
         app:request-json(
             github:build-request($url, (
-                <http:header name="Accept" value="application/vnd.github.v3+json" />,
+                $github:accept-header,
                 github:auth-header($token))
             ))
 
     return (
-        if (github:has-next-page($response[1]))
-        then util:log("warn", ('Paged github request has next page! URL:', $url))
-        else (),
+        if (github:has-next-page($response[1])) then (
+            error(
+                xs:QName("github:next-page"),
+                'Paged github request has next page! URL:' || $url,
+                github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
+            )
+        ) else (),
         $response[2]
     )
+};
+
+declare %private function github:request-json-all-pages($url as xs:string, $token as xs:string?, $acc) {
+    let $response :=
+        app:request-json(
+            github:build-request($url, (
+                $github:accept-header,
+                github:auth-header($token))
+            ))
+
+    let $next-url := 
+        if (github:has-next-page($response[1])) then (
+            github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
+        ) else ()
+
+    let $all := ($acc, $response[2])
+
+    return (
+        if (exists($next-url)) then (
+            github:request-json-all-pages($next-url, $token, $all)
+        ) else (
+            $all
+        )
+    )
+};
+
+(:~
+ : api calls where it is clear that more pages will be returned but we do not need them
+ : for instance when the limit is set to 1 result per page when we only need the head commit
+ :)
+declare %private function github:request-json-ignore-pages($url as xs:string, $token as xs:string?) {
+    app:request-json(
+        github:build-request($url, (
+            $github:accept-header,
+            github:auth-header($token))
+        ))[2]
 };
 
 (: raw file downloads :)
