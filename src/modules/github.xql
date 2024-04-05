@@ -145,9 +145,11 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
  : never there.
  :)
 declare function github:remove-or-ignore ($changes as map(*), $filename as xs:string) as map(*) {
-    if ($filename = $changes?new)
-    then map:put($changes, "new", $changes?new[. ne $filename]) (: filter document from new :)
-    else map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
+    let $with-deletion := map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
+    return
+        if ($filename = $changes?new)
+        then map:put($with-deletion, "new", $with-deletion?new[. ne $filename]) (: filter document from new :)
+        else $with-deletion
 };
 
 (: unhandled cases: "copied", "changed", "unchanged" :)
@@ -267,10 +269,14 @@ declare %private function github:incremental-delete($config as map(*), $files as
             [ $filepath, app:delete-resource($config, $filepath) ]
         }
         catch * {
-            [ $filepath, false(), map{
-                "code": $err:code, "description": $err:description, "value": $err:value,
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }]
+            if (contains($err:description, "not found")) then (
+                [ $filepath, true()]
+            ) else (
+                [ $filepath, false(), map{
+                    "code": $err:code, "description": $err:description, "value": $err:value,
+                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
+                }]
+            )
         }
 };
 
