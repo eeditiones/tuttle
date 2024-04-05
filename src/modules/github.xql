@@ -193,7 +193,8 @@ declare function github:incremental($config as map(*)) {
     let $writesha := app:write-sha($config?path, $sha)
     return map {
         'new': array{ $new },
-        'del': array{ $del }
+        'del': array{ $del },
+        'ignored': array{ $changes?ignored }
     }
 };
 
