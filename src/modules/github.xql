@@ -102,7 +102,14 @@ declare function github:get-newest-commits($config as map(*)) as xs:string* {
     let $commits := github:get-raw-commits($config, 100)
     let $shas := array:for-each($commits, github:only-commit-shas#1)?*
     let $how-many := index-of($shas?1, $deployed) - 1
-    return reverse(subsequence($shas?2, 1, $how-many))
+    return
+        if (empty($how-many)) then (
+            error(
+                xs:QName("github:commit-not-found"),
+                'The deployed commit hash ' || $deployed || ' was not found in the list of commits on the remote.')
+        ) else (
+            reverse(subsequence($shas?2, 1, $how-many))
+        )
 };
 
 (:~
