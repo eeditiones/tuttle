@@ -277,7 +277,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
 
                 let $remove-staging := collection:remove($staging, true())
                 let $remove-lock := app:lock-remove($destination)
-
+                let $reindex := xmldb:reindex($destination)
                 return map {
                     "hash": config:deployed-sha($destination),
                     "message": "success"
