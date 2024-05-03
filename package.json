@@ -38,5 +38,8 @@
   "mocha": {
     "timeout": 10000,
     "slow": 1000
+  },
+  "dependencies": {
+    "@jinntec/fore": "^1.8.0"
   }
 }
