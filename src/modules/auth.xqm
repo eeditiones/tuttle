@@ -23,7 +23,7 @@ declare function auth:login($user as xs:string, $password as xs:string, $options
         ) else if ($user) then (
             auth:create-login-session($user, $password, $merged-options)
         ) else (
-            (: auth:get-credentials-from-session($merged-options?domain) :)
+            auth:get-credentials-from-session($merged-options?domain)
         )
 };
 
@@ -37,7 +37,6 @@ declare %private function auth:callback(
     $user as xs:string,
     $password as xs:string,
     $expiration as xs:duration,
-
     $options as map(*)
 ) {
     if ($options?asDba and not(sm:is-dba($user))) then (
@@ -59,7 +58,7 @@ declare function auth:get-credentials($token as xs:string) {
         $password as xs:string,
         $expiration as xs:duration
     ){
-        (: util:log("info", ($newToken, $user, $password, $expiration)), :)
+        util:log("info", ($newToken, $user, $password, $expiration)),
         $user
     })
 };
