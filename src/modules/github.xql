@@ -151,29 +151,25 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
  : triggers or indexing we filter out all of these documents as if they were
  : never there.
  :)
-declare function github:remove-or-ignore ($changes as map(*), $filename as xs:string) as map(*) {
-    let $with-deletion := map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
-    return
-        if ($filename = $changes?new)
-        then map:put($with-deletion, "new", $with-deletion?new[. ne $filename]) (: filter document from new :)
-        else $with-deletion
-};
-
-(: unhandled cases: "copied", "changed", "unchanged" :)
 declare function github:aggregate-filechanges ($changes as map(*), $next as map(*)) as map(*) {
     switch ($next?status)
-    case "added" (: fall-through :)
-    case "modified" return
-        if ($next?filename = $changes?new) (: file already in new list :)
-        then $changes
-        else map:put($changes, "new", ($changes?new, $next?filename))
+    case "added" return
+        let $new := map:put($changes, "new", ($changes?new, $next?filename))
+        (: if same file was re-added then remove from it "del" list :)
+        return map:put($new, "del", $changes?del[. ne $next?filename])
+    case "modified" return 
+        (: add to "new" list, make sure each entry is in there only once :)
+        map:put($changes, "new", ($changes?new[. ne $next?filename], $next?filename))
     case "renamed" return
-        github:remove-or-ignore(
-            map:put($changes, "new", ($changes?new, $next?filename)),
-            $next?previous_filename)
+        let $new := map:put($changes, "new", ($changes?new, $next?filename))
+        return map:put($new, "del", ($changes?del, $next?previous_filename))
     case "removed" return
-        github:remove-or-ignore($changes, $next?filename)
+        (: ignore this document, if it was added _and_ removed in the same changeset :)
+        if ($next?filename = $changes?new)
+        then map:put($changes, "new", $changes?new[. ne $next?filename])
+        else map:put($changes, "del", ($changes?del, $next?filename))
     default return
+        (: unhandled cases: "copied", "changed", "unchanged" :)
         $changes
 };
 
@@ -195,8 +191,8 @@ declare function github:incremental-dry($config as map(*)) {
 declare function github:incremental($config as map(*)) {
     let $sha := github:get-last-commit($config)?sha
     let $changes := github:get-changes($config)
-    let $new := github:incremental-add($config, $changes?new, $sha)
     let $del := github:incremental-delete($config, $changes?del)
+    let $new := github:incremental-add($config, $changes?new, $sha)
     let $writesha := app:write-sha($config?path, $sha)
     return map {
         'new': array{ $new },
