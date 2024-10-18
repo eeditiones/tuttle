@@ -38,8 +38,23 @@ The resulting xar(s) are found in the root of the project.
 
 ## Testing
 
-To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. 
-Run tests  with ```npm test```
+To run the local test suite you need an
+* instance of eXist running on `localhost:8080` and 
+* `npm` to be available in your path
+* a GitHub personal access token with read access to public repositories
+* a gitlab personal access token with read access to public repositories
+
+In CI these access tokens are read from environment variables.
+You can do the same with
+```bash
+export tuttle_token_tuttle_sample_data=<GITHUB_PAT>; \ 
+export tuttle_token_gitlab_sample_data=<GITLAB_PAT>; \ 
+path/to/startup.sh
+```
+
+Alternatively, you can modify `/db/apps/tuttle/data/tuttle.xml` _and_ `test/fixtures/alt-tuttle.xml` to include your tokens. But remember to never commit them!
+
+Run tests with ```npm test```
 
 ## Configuration
 
