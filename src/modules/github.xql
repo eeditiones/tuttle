@@ -162,7 +162,8 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         map:put($changes, "new", ($changes?new[. ne $next?filename], $next?filename))
     case "renamed" return
         let $new := map:put($changes, "new", ($changes?new, $next?filename))
-        return map:put($new, "del", ($changes?del, $next?previous_filename))
+        (: account for files that existed, were removed in one commit and then reinstated by renaming a file :)
+        return map:put($new, "del", ($changes?del[. ne $next?filename], $next?previous_filename))
     case "removed" return
         (: ignore this document, if it was added _and_ removed in the same changeset :)
         if ($next?filename = $changes?new)
