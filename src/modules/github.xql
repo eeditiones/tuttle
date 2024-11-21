@@ -33,7 +33,7 @@ declare function github:commit-ref-url($config as map(*), $per-page as xs:intege
  : Clone defines Version repo
  :)
 declare function github:get-archive($config as map(*), $sha as xs:string) as xs:base64Binary {
-    github:request(
+    github:download-file(
         github:repo-url($config) || "/zipball/" || $sha, $config?token)
 };
 
@@ -42,7 +42,7 @@ declare function github:get-archive($config as map(*), $sha as xs:string) as xs:
  :)
 declare function github:get-last-commit($config as map(*)) as map(*) {
     array:head(
-        github:request-json(
+        github:request-json-ignore-pages(
             github:commit-ref-url($config, 1), $config?token))
 };
 
@@ -90,7 +90,7 @@ declare %private function github:only-commit-shas ($commit-info as map(*)) as ar
  : Get commits in full
  :)
 declare function github:get-raw-commits($config as map(*), $count as xs:integer) as array(*)? {
-    github:request-json(
+    github:request-json-ignore-pages(
         github:commit-ref-url($config, $count), $config?token)
 };
 
@@ -102,7 +102,14 @@ declare function github:get-newest-commits($config as map(*)) as xs:string* {
     let $commits := github:get-raw-commits($config, 100)
     let $shas := array:for-each($commits, github:only-commit-shas#1)?*
     let $how-many := index-of($shas?1, $deployed) - 1
-    return reverse(subsequence($shas?2, 1, $how-many))
+    return
+        if (empty($how-many)) then (
+            error(
+                xs:QName("github:commit-not-found"),
+                'The deployed commit hash ' || $deployed || ' was not found in the list of commits on the remote.')
+        ) else (
+            reverse(subsequence($shas?2, 1, $how-many))
+        )
 };
 
 (:~
@@ -144,27 +151,26 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
  : triggers or indexing we filter out all of these documents as if they were
  : never there.
  :)
-declare function github:remove-or-ignore ($changes as map(*), $filename as xs:string) as map(*) {
-    if ($filename = $changes?new)
-    then map:put($changes, "new", $changes?new[. ne $filename]) (: filter document from new :)
-    else map:put($changes, "del", ($changes?del, $filename)) (: add document to be removed :)
-};
-
-(: unhandled cases: "copied", "changed", "unchanged" :)
 declare function github:aggregate-filechanges ($changes as map(*), $next as map(*)) as map(*) {
     switch ($next?status)
-    case "added" (: fall-through :)
-    case "modified" return
-        if ($next?filename = $changes?new) (: file already in new list :)
-        then $changes
-        else map:put($changes, "new", ($changes?new, $next?filename))
+    case "added" return
+        let $new := map:put($changes, "new", ($changes?new, $next?filename))
+        (: if same file was re-added then remove from it "del" list :)
+        return map:put($new, "del", $changes?del[. ne $next?filename])
+    case "modified" return 
+        (: add to "new" list, make sure each entry is in there only once :)
+        map:put($changes, "new", ($changes?new[. ne $next?filename], $next?filename))
     case "renamed" return
-        github:remove-or-ignore(
-            map:put($changes, "new", ($changes?new, $next?filename)),
-            $next?previous_filename)
+        let $new := map:put($changes, "new", ($changes?new, $next?filename))
+        (: account for files that existed, were removed in one commit and then reinstated by renaming a file :)
+        return map:put($new, "del", ($changes?del[. ne $next?filename], $next?previous_filename))
     case "removed" return
-        github:remove-or-ignore($changes, $next?filename)
+        (: ignore this document, if it was added _and_ removed in the same changeset :)
+        if ($next?filename = $changes?new)
+        then map:put($changes, "new", $changes?new[. ne $next?filename])
+        else map:put($changes, "del", ($changes?del, $next?filename))
     default return
+        (: unhandled cases: "copied", "changed", "unchanged" :)
         $changes
 };
 
@@ -186,12 +192,13 @@ declare function github:incremental-dry($config as map(*)) {
 declare function github:incremental($config as map(*)) {
     let $sha := github:get-last-commit($config)?sha
     let $changes := github:get-changes($config)
-    let $new := github:incremental-add($config, $changes?new, $sha)
     let $del := github:incremental-delete($config, $changes?del)
+    let $new := github:incremental-add($config, $changes?new, $sha)
     let $writesha := app:write-sha($config?path, $sha)
     return map {
         'new': array{ $new },
-        'del': array{ $del }
+        'del': array{ $del },
+        'ignored': array{ $changes?ignored }
     }
 };
 
@@ -201,19 +208,40 @@ declare function github:incremental($config as map(*)) {
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     let $url := github:repo-url($config) || "/commits/"  || $sha
-    let $commit := github:request-json($url, $config?token)
+    let $commit := github:request-json-all-pages($url, $config?token, ())
 
-    return $commit?files
+    return array { $commit?files?* }
 };
+
+(: TODO: make raw url configurable :)
+declare variable $github:raw-usercontent-endpoint := "https://raw.githubusercontent.com";
 
 (:~
  : Get blob of a file
+ : https://raw.githubusercontent.com/<owner>/<repo>/<sha>/<path>
  :)
-declare function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) as xs:string {
-    let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
-    let $content := github:request-json($blob-url, $config?token)?content
-
-    return util:base64-decode($content)
+declare %private function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
+    if (not(starts-with($config?base-url, "https://api.github.com"))) then (
+        (: for GitHub enterprise we have to query for the download url, this might return the contents directly :) 
+        let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
+        let $json := github:request-json($blob-url, $config?token)
+        let $content := $json?content
+    
+        return
+            if ($json?content = "") (: endpoint did not return base64 encoded contents :)
+            then github:download-file($json?download_url, $config?token)
+            else util:base64-decode($content)
+    ) else (
+        (: for github.com we can construct the download url :)
+        let $blob-url := string-join((
+            $github:raw-usercontent-endpoint,
+            $config?owner,
+            $config?repo,
+            $sha,
+            escape-html-uri($filename)
+        ), "/")
+        return github:download-file($blob-url, $config?token)
+    )
 };
 
 (:~
@@ -246,10 +274,14 @@ declare %private function github:incremental-delete($config as map(*), $files as
             [ $filepath, app:delete-resource($config, $filepath) ]
         }
         catch * {
-            [ $filepath, false(), map{
-                "code": $err:code, "description": $err:description, "value": $err:value,
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }]
+            if (contains($err:description, "not found")) then (
+                [ $filepath, true()]
+            ) else (
+                [ $filepath, false(), map{
+                    "code": $err:code, "description": $err:description, "value": $err:value,
+                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
+                }]
+            )
         }
 };
 
@@ -276,34 +308,99 @@ declare %private function github:incremental-add($config as map(*), $files as xs
  : Github request
  :)
 
-(: If the response header `link` contains rel="next", there are commits missing. :)
+(:~
+ : If the response header `link` contains rel="next", there are commits missing.
+  <hc:header
+    name="link"
+    value="&lt;https://api.github.com/repositories/11208105/commits/5b4d5b48784fc9535aed38d60082f5d60dbb9f1a?page=2&gt;; rel=&#34;next&#34;, &lt;https://api.github.com/repositories/11208105/commits/5b4d5b48784fc9535aed38d60082f5d60dbb9f1a?page=3&gt;; rel=&#34;last&#34;"/>
+ :)
 declare %private function github:has-next-page($response as element(http:response)) {
-    let $link-header := $response//http:header/@name[.="link"]
-    return contains($link-header, 'rel="next"')
+    exists($response/http:header[@name="link"])
 };
 
+declare %private function github:parse-link-header($link-header as xs:string) as map(*) {
+    map:merge(
+        tokenize($link-header, ', ')
+        ! array { tokenize(., '; ') }
+        ! map { 
+            replace(?2, "rel=""(.*?)""", "$1") : substring(?1, 2, string-length(?1) - 2)
+        }
+    )
+};
+
+declare variable $github:accept-header := <http:header name="Accept" value="application/vnd.github+json" />;
+
+(: api calls :)
 declare %private function github:request-json($url as xs:string, $token as xs:string?) {
-    let $response := app:request-json(github:build-request($url, $token))
+    let $response :=
+        app:request-json(
+            github:build-request($url, (
+                $github:accept-header,
+                github:auth-header($token))
+            ))
 
     return (
-        if (github:has-next-page($response[1]))
-        then util:log("warn", ('Paged github request has next page! URL:', $url))
-        else (),
+        if (github:has-next-page($response[1])) then (
+            error(
+                xs:QName("github:next-page"),
+                'Paged github request has next page! URL:' || $url,
+                github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
+            )
+        ) else (),
         $response[2]
     )
 };
 
-declare %private function github:request($url as xs:string, $token as xs:string?) {
-    app:request(github:build-request($url, $token))[2]
+declare %private function github:request-json-all-pages($url as xs:string, $token as xs:string?, $acc) {
+    let $response :=
+        app:request-json(
+            github:build-request($url, (
+                $github:accept-header,
+                github:auth-header($token))
+            ))
+
+    let $next-url := 
+        if (github:has-next-page($response[1])) then (
+            github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
+        ) else ()
+
+    let $all := ($acc, $response[2])
+
+    return (
+        if (exists($next-url)) then (
+            github:request-json-all-pages($next-url, $token, $all)
+        ) else (
+            $all
+        )
+    )
 };
 
-declare %private function github:build-request($url as xs:string, $token as xs:string?) as element(http:request) {
-    <http:request http-version="1.1" href="{$url}" method="get">
-        <http:header name="Accept" value="application/vnd.github.v3+json" />
-        {
-            if (empty($token) or $token = "")
-            then ()
-            else <http:header name="Authorization" value="token {$token}"/>
-        }
-    </http:request>
+(:~
+ : api calls where it is clear that more pages will be returned but we do not need them
+ : for instance when the limit is set to 1 result per page when we only need the head commit
+ :)
+declare %private function github:request-json-ignore-pages($url as xs:string, $token as xs:string?) {
+    app:request-json(
+        github:build-request($url, (
+            $github:accept-header,
+            github:auth-header($token))
+        ))[2]
 };
+
+(: raw file downloads :)
+declare %private function github:download-file ($url as xs:string, $token as xs:string?) {
+     app:request(
+        github:build-request($url,
+            github:auth-header($token)))[2]
+};
+
+declare %private function github:auth-header($token as xs:string?) as element(http:header)? {
+    if (empty($token) or $token = "")
+    then ()
+    else <http:header name="Authorization" value="token {$token}"/>
+};
+
+declare %private function github:build-request($url as xs:string, $headers as element(http:header)*) as element(http:request) {
+    <http:request http-version="1.1" href="{$url}" method="get">{ $headers }</http:request>
+};
+

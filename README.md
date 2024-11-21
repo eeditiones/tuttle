@@ -31,63 +31,107 @@ To initialize the project and load dependencies run
 
 | Run | Description |
 |---------|-------------|
-|```gulp build```|to just build Tuttle. |
-|```gulp install```|To build and install Tuttle in one go|
+|```npm run build```|to just build Tuttle. |
+|```npm run deploy```|To build and install Tuttle in one go|
 
 The resulting xar(s) are found in the root of the project.
 
 ## Testing
 
-To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. 
-Run tests  with ```npm test```
+To run the local test suite you need an
+* instance of eXist running on `localhost:8080` and 
+* `npm` to be available in your path
+* a GitHub personal access token with read access to public repositories
+* a gitlab personal access token with read access to public repositories
+
+In CI these access tokens are read from environment variables.
+You can do the same with
+```bash
+export tuttle_token_tuttle_sample_data=<GITHUB_PAT>; \ 
+export tuttle_token_gitlab_sample_data=<GITLAB_PAT>; \ 
+path/to/startup.sh
+```
+
+Alternatively, you can modify `/db/apps/tuttle/data/tuttle.xml` _and_ `test/fixtures/alt-tuttle.xml` to include your tokens. But remember to never commit them!
+
+Run tests with ```npm test```
 
 ## Configuration
 
 Tuttle is configured in `data/tuttle.xml`. 
 
-### Gitservice configuration 
-@name is always the name of the destination collection.  It will be configured in `data/tuttle.xml`
+New with version 2.0.0:
 
-An example:
+A commented example configuration is available `data/tuttle-example-config.xml`.
+If you want to update tuttle your modified configuration file will be backed up to
+`/db/tuttle-backup/tuttle.xml` and restored on installation of the new version.
+
+Otherwise, when no back up of an existing config-file is found, the example configuration is copied to `data/tuttle.xml`.
+
+> [!TIP]
+> When migrating from an earlier version you can copy your existing configuration to the backup location:
+> `xmldb:copy-resource('/db/apps/tuttle/data', 'tuttle.xml', '/db/tuttle-backup', 'tuttle.xml')`
+
+### Repository configuration 
+
+The repositories to keep in sync with a gitservice are all listed under the repos-element.
+
+The name-attribute refers to the **destination collection** also known as the **target collection**.
+
+#### Collection
+
+An example: `<collection name="tuttle-sample-data">`
+The collection `/db/apps/tuttle-sample-data` is now considered to be kept in sync with a git repository.
+
 ```xml
-  <repos>
-    <collection name="tuttle-sample-data">
-        <default>true</default>
-        <type>github</type>
-        <baseurl>https://api.github.com/</baseurl>
-        <repo>tuttle-sample-data</repo>
-        <owner>tuttle-sample-data</owner>
-        <token></token>
-        <ref>master</ref>
-        <hookuser>admin</hookuser>
-        <hookpasswd></hookpasswd>
-    </collection>
-    
-   <collection name="tuttle-sample-gitlab">
-        <type>gitlab</type>
-        <baseurl>https://gitlab.com/api/v4/</baseurl>
-        <project-id>tuttle-sample-data</project-id>
-        <token>XXX</token>
-        <ref>master</ref>
-        <hookuser>admin</hookuser>
-        <hookpasswd></hookpasswd>
-    </collection>
-  </repos>
+<collection name="tuttle-sample-data">
+    <default>true</default>
+
+    <type>github</type>
+    <baseurl>https://api.github.com/</baseurl>
+
+    <repo>tuttle-sample-data</repo>
+    <owner>tuttle-sample-data</owner>
+
+    <token>a-personal-access-token</token>
+
+    <ref>a-branch</ref>
+
+    <hookuser>a-exist-user</hookuser>
+    <hookpasswd>that-users-password</hookpasswd>
+</collection>
 ```
 
 #### type
-Gitserver type:  'github' or 'gitlab'
 
-####  baseurl
-* For github the baseurl is always api.github.com
-* For gitlab the url can also be your private gitlab server egg 'https://gitlab.existsolutions.com/api/v4/'
+```xml
+<type>gitlab</type>
+```
 
-####  repo, owner and project-id
- * For github you have to specify the owner and the repo
- * For gitlab you have to specify the project-id of the repository
+There are two supported git services at the moment `github` and `gitlab`
 
-#### ref 
-Define the working branch of the git repository
+#### baseurl
+
+```xml
+<baseurl>https://api.server/</baseurl>
+```
+
+* For github the baseurl is `https://api.github.com/` or your github-enterprise API endpoint
+* For gitlab the baseurl is `https://gitlab.com/api/v4/` but can also be your private gitlab server egg 'https://gitlab.existsolutions.com/api/v4/'
+
+#### repo, owner and project-id
+
+* For github you **have to** specify the owner and the repo
+* For gitlab you **have to** specify the project-id of the repository
+
+
+#### ref
+
+```xml
+<ref>main</ref>
+```
+
+Defines the branch you want to track. 
 
 #### hookuser & hookpasswd
 
@@ -95,13 +139,12 @@ Define the working branch of the git repository
 
 If a token is specified Tuttle authenticates against GitHub or GitLab. When a token is not defined, Tuttle assumes a public repository without any authentication.
 
-It is also possible to pass the token via an environment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
+> [!NOTE]
+> Be aware of the rate limits for unauthenticated requests
+> GitHub allows 60 unauthenticated requests per hour but 5,000 for authenticated requests
 
-Be aware of the rate limits
-* GitHub: 
-  * 60 unauthenticated requests per hour
-  * 5,000 authenticated requests per hour
-
+> [!TIP]
+> It is also possible to pass the token via an environment variable. The name of the variable have to be  `tuttle_token_ + collection` (all dashes must be replaces by underscore). Example: `tuttle_token_tuttle_sample_data`
 
 ##### Create API-Keys for Github / Gitlab
 
@@ -123,17 +166,22 @@ The dashboard can trigger a full deployment or an incremental update.
 Full deployment clones the repository from git and install it as a `.xar` file.
 With incremental update only the changes to the database collection are applied.
 
+> [!NOTE]
+> Tuttle is built to keep track of **data collections**
+
+> [!NOTE]
+> Tuttle is does not run pre- or post install scripts nor change the index configuration on incremental updates!
+
 ### Lets start
 
-1) customize the configuration (`modules/config.xql`)
+1) customize the configuration (`data/tuttle.xml`)
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 
 Repositories from which a valid XAR (existing `expath-pkg.xml` and `repo.xml`) package can be generated are installed as a package, all others are created purely on the DB.
 
-**REMARK: Note that there may be index problems if a collection is not installed as a package.**
-
-**REMARK: Only use it with data collections**
+> [!NOTE]
+> Note that there may be index problems if a collection is not installed as a package.
 
 ## API
 
@@ -243,10 +291,9 @@ be obtained from the respective service.
 
 The key for the gitservice must be configured in Gitservice configuration as shown above.
 
+## Roadmap
 
-## DB to Git
-
-Will be implemented in release 2.0.0
+- [ ] DB to Git
 
 ## Honorable mentions:
 
