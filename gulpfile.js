@@ -9,20 +9,15 @@ const rename = require('gulp-rename')
 const del = require('delete')
 
 const pkg = require('./package.json')
-const { version, license } = pkg
+const { app, version, license } = pkg
+const replacements = [app, { version, license }]
+
+const packageUri = app.namespace
 
 // read metadata from .existdb.json
 const existJSON = require('./.existdb.json')
-const replacements = [existJSON.package, { version, license }]
-
-const packageUri = existJSON.package.namespace
 const serverInfo = existJSON.servers.localhost
-const target = serverInfo.root
-
 const url = new URL(serverInfo.server)
-// console.log(url)
-
-// FIXME read from .existdb.json
 const connectionOptions = {
     host: url.hostname,
     port: url.port,
@@ -38,7 +33,7 @@ const existClient = createClient(connectionOptions);
  * Use the `delete` module directly, instead of using gulp-rimraf
  */
 function clean (cb) {
-    del(['build'], cb);
+    del(['build', 'dist'], cb);
 }
 exports.clean = clean
 
@@ -94,22 +89,22 @@ function watchBuild () {
 }
 
 // construct the current xar name from available data
-const packageName = () => `${existJSON.package.target}-${pkg.version}.xar`
+const xarFilename = `${app.abbrev}-${pkg.version}.xar`
 
 /**
  * create XAR package in repo root
  */
 function xar () {
     return src('build/**/*', {base: 'build/'})
-        .pipe(zip(packageName()))
-        .pipe(dest('.'))
+        .pipe(zip(xarFilename))
+        .pipe(dest('dist'))
 }
 
 /**
  * upload and install the latest built XAR
  */
 function installXar () {
-    return src(packageName())
+    return src(xarFilename, {cwd:'dist/'})
         .pipe(existClient.install({ packageUri }))
 }
 
