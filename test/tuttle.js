@@ -106,6 +106,8 @@ describe('Tuttle', function () {
         before(async function () {
             const buffer = await readFile('./test/fixtures/alt-tuttle.xml')
             await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml')
+            const buffer2 = await readFile('./test/fixtures/test.xqm')
+            await putResource(buffer2, '/db/apps/tuttle/modules/test.xqm')
             res = await axios.get('git/status', { auth });
             repos = res.data.repos
         });
