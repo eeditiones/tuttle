@@ -104,7 +104,7 @@ function xar () {
  * upload and install the latest built XAR
  */
 function installXar () {
-    return src(xarFilename, {cwd:'dist/'})
+    return src(xarFilename, { cwd:'dist/', encoding: false })
         .pipe(existClient.install({ packageUri }))
 }
 
