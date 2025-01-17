@@ -222,7 +222,7 @@ declare variable $github:raw-usercontent-endpoint := "https://raw.githubusercont
  : https://raw.githubusercontent.com/<owner>/<repo>/<sha>/<path>
  :)
 declare %private function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
-    if (not(starts-with($config?base-url, "https://api.github.com"))) then (
+    if (not(starts-with($config?baseurl, "https://api.github.com"))) then (
         (: for GitHub enterprise we have to query for the download url, this might return the contents directly :) 
         let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
         let $json := github:request-json($blob-url, $config?token)
