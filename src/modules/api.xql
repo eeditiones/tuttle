@@ -12,7 +12,7 @@ import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace vcs="http://e-editiones.org/tuttle/vcs" at "vcs.xqm";
 import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
 import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
-import module namespace collection="http://existsolutions.com/modules/collection" at "collection.xqm";
+import module namespace collection="http://existsolutions.com/modules/collection";
 
 
 (:~

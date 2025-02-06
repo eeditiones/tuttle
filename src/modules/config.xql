@@ -52,7 +52,6 @@ declare function config:deployed-sha($path as xs:string) as xs:string? {
 
 declare function config:get-callback($config as map(*)) as function(*)? {
     let $collection-config := $config:tuttle-config/repos/collection[@name = $config?collection]
-    let $_ := util:log("info", "adslfkjasd;lfkajsd;flkajsdf;lkasjd;flaksdj")
     let $_ := util:log("info", $config?collection)
     let $_ := util:log("info", $config:tuttle-config/repos/collection/@name/string())
     let $_ := util:log("info", $collection-config)

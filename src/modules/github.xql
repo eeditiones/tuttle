@@ -168,7 +168,8 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         (: ignore this document, if it was added _and_ removed in the same changeset :)
         if ($next?filename = $changes?new)
         then map:put($changes, "new", $changes?new[. ne $next?filename])
-        else map:put($changes, "del", ($changes?del, $next?filename))
+        (: guard against duplicates in deletions :)
+        else map:put($changes, "del", ($changes?del[. ne $next?filename], $next?filename))
     default return
         (: unhandled cases: "copied", "changed", "unchanged" :)
         $changes

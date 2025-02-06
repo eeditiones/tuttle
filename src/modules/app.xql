@@ -8,7 +8,7 @@ import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace repo="http://exist-db.org/xquery/repo";
 import module namespace sm="http://exist-db.org/xquery/securitymanager";
 
-import module namespace collection="http://existsolutions.com/modules/collection" at "collection.xqm";
+import module namespace collection="http://existsolutions.com/modules/collection";
 
 import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
 
