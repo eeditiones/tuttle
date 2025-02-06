@@ -68,27 +68,31 @@ declare function cb:check-version ($collection-config as map(*), $changes as map
 };
 
 declare function cb:changes-array-contains-path($array as array(*), $path as xs:string) as xs:boolean {
-    exists(
-        array:filter($array, function ($change as map(*)) { $change?path eq $path })?1)
+    $path = $array?*?path
 };
 
-declare function cb:update-package-version($target-collection as xs:string) {
+declare function cb:filter-by-path($path as xs:string) as function(*) {
+    function ($change as map(*)) { $change?path eq $path }
+};
+
+declare function cb:update-package-version ($target-collection as xs:string) {
     let $path-to-descriptor := $target-collection || "/" || $cb:package-descriptor
-    if (not(doc-available($path-to-descriptor))) then (
-        "Failure: package descriptor does not exist even though it was updated"
-    ) else (
-        try {
-            let $expath-package-meta := doc($path-to-descriptor)//expath:package
-            let $package-name := $expath-package-meta/@name/string()
-            (: remove package? :)
-            let $stub-name := concat($expath-pkg/@abbrev, "-", $expath-pkg/@version, "__stub.xar")
-            let $xar := cb:create-stub-package($target-collection, $stub-name)
-            let $installed := cb:install-stub-package($stub-name)
-            return "updated"
-        } catch * {
-            "Failure: " || $err:description
-        }
-    )
+    return
+        if (not(doc-available($path-to-descriptor))) then (
+            "Failure: package descriptor does not exist even though it was updated"
+        ) else (
+            try {
+                let $expath-package-meta := doc($path-to-descriptor)//expath:package
+                let $package-name := $expath-package-meta/@name/string()
+                (: remove package? :)
+                let $stub-name := concat($expath-package-meta/@abbrev, "-", $expath-package-meta/@version, "__stub.xar")
+                let $xar := cb:create-stub-package($target-collection, $stub-name)
+                let $installed := cb:install-stub-package($stub-name)
+                return "updated"
+            } catch * {
+                "Failure: " || $err:description
+            }
+        )
 };
 
 declare %private function cb:create-stub-package($collection as xs:string, $filename as xs:string) {
@@ -102,7 +106,7 @@ declare %private function cb:create-stub-package($collection as xs:string, $file
 declare %private function cb:resources-to-zip($collection as xs:string) {
     for $resource in (
         (: $target, needed? :)
-        xmldb:get-child-resources($collection)[. = ("expath-pkg.xml", "repo.xml", "exist.xml")][starts-with(., "icon")]
+        xmldb:get-child-resources($collection)[. = ("expath-pkg.xml", "repo.xml", "exist.xml") or starts-with(., "icon")]
     )
     return
         xs:anyURI($collection || "/" || $resource)
