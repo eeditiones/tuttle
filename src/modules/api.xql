@@ -246,7 +246,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
             then map { "message" : "Could not create destination collection!", "error": $ensure-destination-collection?error }
             else
                 let $write-lock := app:lock-write($destination, "deploy")
-                let $is-expath-package := xmldb:get-child-resources($staging) = ("expath-pkg.xml", "repo.xml")
+                let $is-expath-package := xmldb:get-child-resources($staging) = ("expath-pkg.xml")
                 let $deploy :=
                     if ($is-expath-package)
                     then (

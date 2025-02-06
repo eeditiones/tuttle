@@ -178,7 +178,7 @@ With incremental update only the changes to the database collection are applied.
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 
-Repositories from which a valid XAR (existing `expath-pkg.xml` and `repo.xml`) package can be generated are installed as a package, all others are created purely on the DB.
+Repositories from which a valid XAR (existing `expath-pkg.xml`) package can be generated are installed as a package, all others are created purely on the DB.
 
 > [!NOTE]
 > Note that there may be index problems if a collection is not installed as a package.
