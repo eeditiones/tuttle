@@ -4,7 +4,7 @@
   "description": "tuttle - a Git-integration for eXist-db",
   "scripts": {
     "start": "gulp",
-    "test": "gulp install && mocha --exit",
+    "test": "npm run build && mocha --exit",
     "test:watch": "mocha --watch",
     "build": "gulp xar",
     "deploy": "gulp install",

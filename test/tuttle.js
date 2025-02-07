@@ -1,7 +1,17 @@
-const { auth, axios, putResource } = require('./util.js')
+const { auth, axios, putResource, install, remove } = require('./util.js')
 const { readFile } = require('node:fs/promises')
 const chai = require('chai')
 const expect = chai.expect
+
+before(async () => {
+  // Install tuttle
+  await install()
+})
+
+after(async () => {
+  // Remove tuttle again
+  await remove()
+})
 
 describe('Tuttle', function () {
     const defaultCollection = 'tuttle-sample-data'

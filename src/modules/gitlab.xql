@@ -177,8 +177,13 @@ declare function gitlab:get-changes ($collection-config as map(*)) as map(*) {
         for $commit in gitlab:get-newest-commits($collection-config)
         return gitlab:get-commit-files($collection-config, $commit?short_id)?*
 
-    (: aggregate file changes :)
-    return fold-left($changes, map{}, gitlab:aggregate-filechanges#2)
+    let $aggregated := fold-left($changes, map{}, gitlab:aggregate-filechanges#2)
+    let $filtered := fold-left($aggregated?new, map{}, app:ignore-reducer#2)
+    return map {
+        "del": $aggregated?del,
+        "new": $filtered?new,
+        "ignored": $filtered?ignored
+    }
 };
 
 (:~ 
@@ -188,7 +193,8 @@ declare function gitlab:incremental-dry($config as map(*)) as map(*) {
     let $changes := gitlab:get-changes($config)
     return map {
         'new': array{ $changes?new },
-        'del': array{ $changes?del }
+        'del': array{ $changes?del },
+        'ignored': array{ $changes?ignored }
     }
 };
 
@@ -203,7 +209,8 @@ declare function gitlab:incremental($config as map(*)) as map(*) {
     let $writesha := app:write-sha($config?path, $sha)
     return map {
         'new': array{ $new },
-        'del': array{ $del }
+        'del': array{ $del },
+        'ignored': array{ $changes?ignored }
     }
 };
 

@@ -12,6 +12,12 @@ import module namespace collection="http://existsolutions.com/modules/collection
 
 import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
 
+declare function app:ignore-reducer($res, $next) {
+    if ($next = ("build.xml") or starts-with($next, ".git"))
+    then map:put($res, 'ignored', ($res?ignored, $next))
+    else map:put($res, 'new', ($res?new, $next))
+};
+
 declare function app:extract-archive($zip as xs:base64Binary, $collection as xs:string) {
     compression:unzip($zip, 
         app:unzip-filter#3, config:ignore(),

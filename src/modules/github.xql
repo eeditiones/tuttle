@@ -128,11 +128,7 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
 
     (: aggregate file changes :)
     let $aggregated := fold-left($changes, map{}, github:aggregate-filechanges#2)
-    let $filtered := fold-left($aggregated?new, map{}, function($res, $next) {
-        if ($next = ("build.xml") or starts-with($next, ".git"))
-        then map:put($res, 'ignored', ($res?ignored, $next))
-        else map:put($res, 'new', ($res?new, $next))
-    })
+    let $filtered := fold-left($aggregated?new, map{}, app:ignore-reducer#2)
     return map {
         "del": $aggregated?del,
         "new": $filtered?new,
