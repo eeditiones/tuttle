@@ -57,6 +57,17 @@ declare function cb:test ($collection-config as map(*), $changes as map(*)) {
 };
 
 (:~
+ : Scan an array like ?new ?del or ?ignored you can find out if it contains a specific path(s)
+ : if given more than one path then you need to think of them as being combined with or
+ : Example:
+ : to check if the repo.xml was added or changed do
+ : cb:changes-array-contains-path($changes?new, "repo.xml")
+ :)
+declare function cb:changes-array-contains-path($array as array(*), $path as xs:string+) as xs:boolean {
+    $path = $array?*?path
+};
+
+(:~
  : Scan the changeset for an updated expath-pkg.xml
  : update the version that exist-db reports for this package by
  : "installing" a stub
@@ -67,13 +78,6 @@ declare function cb:check-version ($collection-config as map(*), $changes as map
     ) else ()
 };
 
-declare function cb:changes-array-contains-path($array as array(*), $path as xs:string) as xs:boolean {
-    $path = $array?*?path
-};
-
-declare function cb:filter-by-path($path as xs:string) as function(*) {
-    function ($change as map(*)) { $change?path eq $path }
-};
 
 declare function cb:update-package-version ($target-collection as xs:string) {
     let $path-to-descriptor := $target-collection || "/" || $cb:package-descriptor
