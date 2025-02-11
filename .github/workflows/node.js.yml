@@ -38,10 +38,9 @@ jobs:
           --health-interval 4s  
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 18
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: npm ci
       - name: run tests
         run: npm test
