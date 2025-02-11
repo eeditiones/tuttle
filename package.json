@@ -21,13 +21,10 @@
     "axios": "^1.7.9",
     "chai": "^4.0.0",
     "delete": "^1.1.0",
-    "form-data": "^3.0.0",
     "gulp": "^5.0.0",
     "gulp-rename": "^2.0.0",
     "gulp-zip": "^5.0.2",
-    "jsdom": "^25.0.1",
-    "mocha": "^11.1.0",
-    "tmp": "^0.2.1"
+    "mocha": "^11.1.0"
   },
   "private": true,
   "mocha": {
