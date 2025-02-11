@@ -8,15 +8,15 @@ import zip from 'gulp-zip'
 import rename from 'gulp-rename'
 import del from 'delete'
 
-import * as pkg from './package.json' with { type: 'json' }
-const { app, version, license } = pkg.default
+import pkg from './package.json' with { type: 'json' }
+const { app, version, license } = pkg
 const replacements = [app, { version, license }]
 
 const packageUri = app.namespace
 
 // read metadata from .existdb.json
-import * as existJSON from './.existdb.json' with { type: 'json' }
-const serverInfo = existJSON.default.servers.localhost
+import existJSON from './.existdb.json' with { type: 'json' }
+const serverInfo = existJSON.servers.localhost
 const url = new URL(serverInfo.server)
 const connectionOptions = {
     host: url.hostname,

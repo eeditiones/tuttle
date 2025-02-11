@@ -5,12 +5,11 @@ import { join, basename } from 'node:path'
 import axios from 'axios'
 import { connect } from '@existdb/node-exist'
 
-import * as existJson from '../.existdb.json' with { type: 'json' }
+import existJson from '../.existdb.json' with { type: 'json' }
+const { user, password, server } = existJson.servers.localhost
 
-const { user, password, server } = existJson.default.servers.localhost
-
-import * as pkg from '../package.json' with { type: 'json' }
-const appNamespace = pkg.default.app.namespace
+import pkg from '../package.json' with { type: 'json' }
+const { namespace } = pkg.app
 
 // for use in custom controller tests
 const adminCredentials = { username: user, password }
@@ -83,7 +82,7 @@ async function install () {
 }
 
 async function remove() {
-    await db.app.remove(appNamespace)
+    await db.app.remove(namespace)
 
     const result = await Promise.allSettled([
         db.collections.remove('/db/tuttle-backup'),
