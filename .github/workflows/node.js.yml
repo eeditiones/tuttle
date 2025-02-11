@@ -5,7 +5,6 @@ name: Test
 
 on: 
   push:
-  pull_request:
   schedule:
     # weekly runs mondays at 08:40 
     - cron: "40 8 * * 1"

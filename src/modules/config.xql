@@ -7,6 +7,8 @@ module namespace config="http://e-editiones.org/tuttle/config";
  :)
 declare variable $config:tuttle-config as element(tuttle) := doc("/db/apps/tuttle/data/tuttle.xml")/tuttle;
 
+declare variable $config:default-ns := "http://e-editiones.org/tuttle/callbacks";
+
 (:~
  : Git configuration
  :)
@@ -46,6 +48,59 @@ declare function config:deployed-sha($path as xs:string) as xs:string? {
     if (doc-available($path || "/gitsha.xml"))
     then doc($path || "/gitsha.xml")/hash/value/string()
     else ()
+};
+
+declare function config:get-callback($config as map(*)) as function(*)? {
+    let $collection-config := $config:tuttle-config/repos/collection[@name = $config?collection]
+    let $_ := util:log("info", $config?collection)
+    let $_ := util:log("info", $config:tuttle-config/repos/collection/@name/string())
+    let $_ := util:log("info", $collection-config)
+    let $_ := util:log("info", $collection-config/callback)
+    return
+    if (empty($collection-config/callback))
+    then (util:log("info", "NO CALLBACK DEFINED, STUPID!"))
+    else if (count($collection-config/callback) ne 1)
+    then error((), "More than one callback is not allowed: " || $collection-config/@name, $collection-config/callback)
+    else (
+        let $ns :=
+            if ($collection-config/callback/@ns)
+            then $collection-config/callback/@ns/string()
+            else $config:default-ns
+
+        let $qname :=
+            try {
+                QName($ns, $collection-config/callback/@name/string())
+            } catch * {
+                error((), "Callback QName problem: " || $collection-config/@name, $collection-config/callback)
+            }
+
+        let $import-options :=
+            map { "location-hints" : 
+                if (exists($collection-config/callback/@location))
+                then $collection-config/callback/@location/string()
+                else "/db/apps/tuttle/content/callbacks.xqm"
+            }
+        (: get function reference :)
+        let $module := 
+            try {
+                fn:load-xquery-module($ns, $import-options)
+            } catch * {
+                error((), "Problem loading the callback for collection " || $collection-config/@name)
+            }
+
+        return 
+            if (
+                (: exists($module) and  :)
+                (: map:contains($module, "functions") and
+                map:contains($module?functions, $qname) and :)
+                map:contains($module?functions?($qname), 2) (: arity 2 (map(*),map(*)) -> item()? :)
+            ) then (
+                util:log("info", $module),
+                $module?functions?($qname)?2
+            ) else (
+                error((), "Callback function could not be found in module: " || $collection-config/@name, $collection-config/callback)
+            )
+    )
 };
 
 declare %private function config:token($collection-config as element(collection)) as xs:string? {

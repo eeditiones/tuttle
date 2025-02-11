@@ -1,7 +1,17 @@
-const { auth, axios, putResource } = require('./util.js')
+const { auth, axios, putResource, install, remove } = require('./util.js')
 const { readFile } = require('node:fs/promises')
 const chai = require('chai')
 const expect = chai.expect
+
+before(async () => {
+  // Install tuttle
+  await install()
+})
+
+after(async () => {
+  // Remove tuttle again
+  await remove()
+})
 
 describe('Tuttle', function () {
     const defaultCollection = 'tuttle-sample-data'
@@ -106,6 +116,8 @@ describe('Tuttle', function () {
         before(async function () {
             const buffer = await readFile('./test/fixtures/alt-tuttle.xml')
             await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml')
+            const buffer2 = await readFile('./test/fixtures/test.xqm')
+            await putResource(buffer2, '/db/apps/tuttle/modules/test.xqm')
             res = await axios.get('git/status', { auth });
             repos = res.data.repos
         });

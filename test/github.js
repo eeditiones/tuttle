@@ -1,4 +1,4 @@
-const { axios, auth, getResourceInfo } = require('./util.js')
+const { axios, auth, getResourceInfo, install, remove } = require('./util.js')
 const chai = require('chai')
 const expect = chai.expect
 
@@ -64,18 +64,18 @@ describe('Github', function () {
 
       it('Returns a list of new resources', async function () {
         newFiles = await Promise.all(dryRunResponse.data.changes.new.map(async (resource) => {
-          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource}`);
+          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource.path}`);
           return [resource, resourceInfo.modified];
         }))
         // console.log('files to fetch', newFiles)
 
         expect(newFiles.length).to.equal(3);
-        expect(newFiles[0][0]).to.equal('data/F-aww.xml')
+        expect(newFiles[0][0].path).to.equal('data/F-aww.xml')
         expect(newFiles[0][1]).to.be.a('date')
 
-        expect(newFiles[1]).to.deep.equal([ 'data/F-tit2.xml', undefined ])
+        expect(newFiles[1]).to.deep.equal([{path: 'data/F-tit2.xml'}, undefined ], 'File was added, so no modified timestamp is expected')
 
-        expect(newFiles[2][0]).to.equal('data/F-ham.xml')
+        expect(newFiles[2][0].path).to.equal('data/F-ham.xml')
         expect(newFiles[2][1]).to.be.a('date')
       });
   
@@ -84,7 +84,7 @@ describe('Github', function () {
 
         expect(delFiles.length).to.be.greaterThan(0);
         expect(delFiles).to.deep.equal(
-          [ 'data/F-wiv.xml', 'data/F-tit.xml' ]
+          [ {path: 'data/F-wiv.xml'}, {path: 'data/F-tit.xml'} ]
         );
       });
     })
@@ -104,7 +104,7 @@ describe('Github', function () {
 
       it('updates all changed resources', async function () {
         await Promise.all(newFiles.map(async (resource) => {
-          const { modified } = await getResourceInfo(`/db/apps/${collection}/${resource[0]}`);
+          const { modified } = await getResourceInfo(`/db/apps/${collection}/${resource[0].path}`);
           expect(modified).to.not.be.undefined;
           expect(modified).to.not.equal(resource[1]);
         }))
@@ -112,7 +112,7 @@ describe('Github', function () {
 
       it('deletes all deleted resources', async function () {
         await Promise.all(delFiles.map(async (resource) => {
-          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource}`);
+          const resourceInfo = await getResourceInfo(`/db/apps/${collection}/${resource.path}`);
           expect(resourceInfo).is.empty;
         }))
       })

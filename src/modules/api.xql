@@ -12,7 +12,7 @@ import module namespace compression="http://exist-db.org/xquery/compression";
 import module namespace vcs="http://e-editiones.org/tuttle/vcs" at "vcs.xqm";
 import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
 import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
-import module namespace collection="http://existsolutions.com/modules/collection" at "collection.xqm";
+import module namespace collection="http://existsolutions.com/modules/collection";
 
 
 (:~
@@ -246,7 +246,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
             then map { "message" : "Could not create destination collection!", "error": $ensure-destination-collection?error }
             else
                 let $write-lock := app:lock-write($destination, "deploy")
-                let $is-expath-package := xmldb:get-child-resources($staging) = ("expath-pkg.xml", "repo.xml")
+                let $is-expath-package := xmldb:get-child-resources($staging) = ("expath-pkg.xml")
                 let $deploy :=
                     if ($is-expath-package)
                     then (
@@ -348,6 +348,17 @@ declare function api:incremental($request as map(*)) as map(*) {
         let $lockfile := $config?path || "/" || config:lock()
         let $actions := vcs:get-actions($config?type)
 
+        let $extend-str := function ($result as xs:string) {
+                map{ "path": $result }
+            }
+        let $extend-arr := function ($result as array(*)) { 
+                map{
+                    "path": $result?1,
+                    "success": $result?2,
+                    "error": if ($result?2) then () else $result?3
+                }
+            }
+
         return
             if (not(xmldb:collection-available($config?path))) then (
                 map { "message" : "Destination collection not exist" }
@@ -357,7 +368,13 @@ declare function api:incremental($request as map(*)) as map(*) {
             )
             else if ($request?parameters?dry) then
                 map {
-                    "changes" : $actions?incremental-dry($config),
+                    "changes" : 
+                        let $changes := $actions?incremental-dry($config)
+                        return map {
+                            'new': array:for-each($changes?new, $extend-str),
+                            'del': array:for-each($changes?del, $extend-str),
+                            'ignored': array:for-each($changes?ignored, $extend-str)
+                        },
                     "message" : "dry-run"
                 }
             else if (doc-available($lockfile)) then (
@@ -365,26 +382,68 @@ declare function api:incremental($request as map(*)) as map(*) {
             )
             else (
                 let $write-lock := app:lock-write($config?path, "incremental")
-                let $incremental := $actions?incremental($config)
+
+                let $incremental := 
+                    let $changes := $actions?incremental($config)
+                    return map {
+                        'new': array:for-each($changes?new, $extend-arr),
+                        'del': array:for-each($changes?del, $extend-arr),
+                        'ignored': array:for-each($changes?ignored, $extend-str)
+                    }
+
+                (: let $new-hash := config:deployed-sha($config?path) :)
+
+                (: run callback if configured :)
+                let $callback := config:get-callback($config)
+
+
+                let $callback-result := 
+                    if (exists($callback)) then
+                        try {
+                            map { "result": $callback($config, $incremental), "success": true() }
+                        } catch * {
+                            map {
+                                "result": (),
+                                "success": false(),
+                                "error": map{
+                                    "code": $err:code, 
+                                    "description": $err:description
+                                }
+                            }
+                        }
+                    else ()
 
                 (:
-                Check if any of the previous additions or deletions did not succeed
-                Each action is an array with [path, success (, error)]
+                Check if any of the previous additions, deletions or callback did not succeed
+                Each action is an array with [result, success (, error)]
                 :)
-                let $results := ($incremental?new?*, $incremental?del?*)?2
-                let $errors := some $result in $results satisfies not($result)
-                
-                let $remove-lock := app:lock-remove($config?path)
+                let $results := ($incremental?new?*, $incremental?del?*, $callback-result)
+                (: let $errors := $results?error :)
+                let $all-errored-operations := filter($results, function ($a) { exists($a?error) })
 
+                (: Q: should the lock be upheld in case of errors? :)
                 return
-                    map {
-                        "hash": config:deployed-sha($config?path),
-                        "message": if ($errors) then "ended with errors" else "success",
-                        "changes": $incremental
-                    }
+                    if (exists($all-errored-operations)) then (
+                        error((), "incremental update failed", map {
+                            "hash": config:deployed-sha($config?path),
+                            "message": "ended with errors",
+                            "changes": $incremental,
+                            "callback": $callback-result,
+                            "errors" : array{ $all-errored-operations }
+                        })
+                    ) else (
+                        app:lock-remove($config?path),
+                        map {
+                            "hash": config:deployed-sha($config?path),
+                            "message": "success",
+                            "changes": $incremental,
+                            "callback": $callback-result
+                        }
+                    )
             )
     }
     catch * {
+        (: FIXME: change status code if error occurred :)
         map {
             "message": $err:description,
             "error": map {

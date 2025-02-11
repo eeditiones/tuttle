@@ -24,6 +24,20 @@
         <!-- only necessary if you need the service to call tuttle -->
         <hookuser>admin</hookuser>
         <hookpasswd></hookpasswd>
+        <!-- CALLBACKS -->
+        <!--
+          what function should be run after an incremental update was done
+          will not be called on dry runs!
+          you can only call one callback function
+        -->
+        <!-- example callback that will just return the arguments the function is called with for documentation and testing -->
+        <callback name="test" />
+        <!--
+          example configuration of a custom function to be called after an incremental update
+        -->
+        <!--
+        <callback name="test" ns="//test" location="/db/apps/tuttle/modules/test.xqm" />
+        -->
     </collection>
     
    <collection name="tuttle-sample-gitlab">

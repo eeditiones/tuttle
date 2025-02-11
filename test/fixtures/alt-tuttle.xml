@@ -19,6 +19,7 @@
         <ref>master</ref>
         <hookuser>admin</hookuser>
         <hookpasswd></hookpasswd>
+        <callback name="test" ns="//test" location="/db/apps/tuttle/modules/test.xqm" />
     </collection>
   </repos>
 

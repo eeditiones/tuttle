@@ -128,15 +128,7 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
 
     (: aggregate file changes :)
     let $aggregated := fold-left($changes, map{}, github:aggregate-filechanges#2)
-    let $filtered := fold-left($aggregated?new, map{}, function($res, $next) {
-        if (
-            $next = ("build.xml", "repo.xml", "expath-pkg.xml")
-            or starts-with($next, ".git")
-            or ends-with($next, ".xconf")
-        )
-        then map:put($res, 'ignored', ($res?ignored, $next))
-        else map:put($res, 'new', ($res?new, $next))
-    })
+    let $filtered := fold-left($aggregated?new, map{}, app:ignore-reducer#2)
     return map {
         "del": $aggregated?del,
         "new": $filtered?new,
@@ -168,7 +160,8 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         (: ignore this document, if it was added _and_ removed in the same changeset :)
         if ($next?filename = $changes?new)
         then map:put($changes, "new", $changes?new[. ne $next?filename])
-        else map:put($changes, "del", ($changes?del, $next?filename))
+        (: guard against duplicates in deletions :)
+        else map:put($changes, "del", ($changes?del[. ne $next?filename], $next?filename))
     default return
         (: unhandled cases: "copied", "changed", "unchanged" :)
         $changes
