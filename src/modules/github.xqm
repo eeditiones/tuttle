@@ -4,8 +4,8 @@ module namespace github="http://e-editiones.org/tuttle/github";
 
 import module namespace crypto="http://expath.org/ns/crypto";
 
-import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
-import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
+import module namespace app="http://e-editiones.org/tuttle/app" at "app.xqm";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xqm";
 
 declare namespace http="http://expath.org/ns/http-client";
 

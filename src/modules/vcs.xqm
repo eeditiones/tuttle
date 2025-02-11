@@ -1,10 +1,11 @@
 
 module namespace vcs="http://e-editiones.org/tuttle/vcs";
 
-import module namespace github="http://e-editiones.org/tuttle/github" at "github.xql";
-import module namespace gitlab="http://e-editiones.org/tuttle/gitlab" at "gitlab.xql";
+(: all API adapter modules must be imported here :)
+import module namespace github="http://e-editiones.org/tuttle/github" at "github.xqm";
+import module namespace gitlab="http://e-editiones.org/tuttle/gitlab" at "gitlab.xqm";
 
-
+(: each enabled API must be listed here :)
 declare variable $vcs:mappings as map(*) := map {
     "github": map {
         "get-url": github:get-url#1,

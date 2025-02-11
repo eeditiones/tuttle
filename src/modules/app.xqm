@@ -10,7 +10,7 @@ import module namespace sm="http://exist-db.org/xquery/securitymanager";
 
 import module namespace collection="http://existsolutions.com/modules/collection";
 
-import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xqm";
 
 declare function app:ignore-reducer($res, $next) {
     if ($next = ("build.xml") or starts-with($next, ".git"))
