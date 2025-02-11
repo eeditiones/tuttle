@@ -55,6 +55,28 @@ function watchTemplates () {
 }
 exports["watch:tmpl"] = watchTemplates
 
+const fore = [
+    "node_modules/@jinntec/fore/dist/fore.js",
+    "node_modules/@jinntec/fore/dist/fore.js.map",
+    "node_modules/@jinntec/fore/dist/fore-dev.js",
+    "node_modules/@jinntec/fore/dist/fore-dev.js.map",
+]
+
+function copyFore() {
+    return src(fore, {base:"node_modules/@jinntec/fore/dist"})
+        .pipe(dest('build/resources/js'))
+}
+
+const foreStyles = [
+    "node_modules/@jinntec/fore/resources/*.css",
+]
+
+function copyForeStyles() {
+    return src(foreStyles, {base:"node_modules/@jinntec/fore/resources"})
+        .pipe(dest('build/resources/css'))
+}
+
+const copyNodeModules = parallel(copyFore, copyForeStyles)
 
 const static = 'src/**/*.{xml,html,xq,xquery,xql,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
 
@@ -112,7 +134,8 @@ function installXar () {
 const build = series(
     clean,
     templates,
-    copyStatic
+    copyStatic,
+    copyNodeModules
 )
 const watchAll = parallel(
     watchStatic,
