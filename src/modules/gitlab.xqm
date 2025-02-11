@@ -2,8 +2,8 @@ xquery version "3.1";
 
 module namespace gitlab="http://e-editiones.org/tuttle/gitlab";
 
-import module namespace app="http://e-editiones.org/tuttle/app" at "app.xql";
-import module namespace config="http://e-editiones.org/tuttle/config" at "config.xql";
+import module namespace app="http://e-editiones.org/tuttle/app" at "app.xqm";
+import module namespace config="http://e-editiones.org/tuttle/config" at "config.xqm";
 
 declare namespace http="http://expath.org/ns/http-client";
 

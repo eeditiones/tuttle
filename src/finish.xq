@@ -28,5 +28,5 @@ else ((: copy example configuration when no backup was found :)
 sm:chmod(xs:anyURI($configuration-collection || $configuration-filename), "rw-r-----")
 ,
 (: set gid for API :)
-sm:chmod(xs:anyURI($target || "/modules/api.xql"), "rwxr-sr-x")
+sm:chmod(xs:anyURI($target || "/modules/api.xq"), "rwxr-sr-x")
 

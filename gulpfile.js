@@ -56,7 +56,7 @@ function watchTemplates () {
 exports["watch:tmpl"] = watchTemplates
 
 
-const static = 'src/**/*.{xml,html,xq,xquery,xql,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
+const static = 'src/**/*.{xml,html,xq,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
 
 /**
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
