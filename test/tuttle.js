@@ -1,7 +1,6 @@
-const { auth, axios, putResource, install, remove } = require('./util.js')
-const { readFile } = require('node:fs/promises')
-const chai = require('chai')
-const expect = chai.expect
+import { auth, axios, putResource, install, remove } from './util.js'
+import { readFile } from 'node:fs/promises'
+import { expect } from 'chai'
 
 before(async () => {
   // Install tuttle

@@ -1,6 +1,5 @@
-const { axios, auth, getResourceInfo, install, remove } = require('./util.js')
-const chai = require('chai')
-const expect = chai.expect
+import { axios, auth, getResourceInfo } from './util.js'
+import { expect } from 'chai'
 
 describe('Github', function () {
   this.timeout(15000);

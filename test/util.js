@@ -1,11 +1,15 @@
-const axios = require('axios');
-const https = require('https')
-const { connect } = require('@existdb/node-exist')
-const { user, password, server } = require('../.existdb.json').servers.localhost
-const appNamespace = require('../package.json').app.namespace
-const { readFile } = require('node:fs/promises')
-const path = require('path');
-const { readdir } = require('fs/promises');
+import { Agent } from 'node:https'
+import { readFile, readdir } from 'node:fs/promises'
+import { join, basename } from 'node:path'
+
+import axios from 'axios'
+import { connect } from '@existdb/node-exist'
+
+import existJson from '../.existdb.json' with { type: 'json' }
+const { user, password, server } = existJson.servers.localhost
+
+import pkg from '../package.json' with { type: 'json' }
+const { namespace } = pkg.app
 
 // for use in custom controller tests
 const adminCredentials = { username: user, password }
@@ -35,7 +39,7 @@ const rejectUnauthorized = !(
 const secure = protocol === 'https:'
 
 if (secure) {
-    axiosInstanceOptions.httpsAgent = new https.Agent({ rejectUnauthorized })
+    axiosInstanceOptions.httpsAgent = new Agent({ rejectUnauthorized })
 }
 
 const axiosInstance = axios.create(axiosInstanceOptions);
@@ -70,35 +74,36 @@ async function install () {
         throw new Error(`No tuttle.xar found. Run 'npm build' before running tests`)
     }
 
-    const xarFile = path.join('dist', matches[0])
+    const xarFile = join('dist', matches[0])
     const xarContents = await readFile(xarFile)
-    const xarName = path.basename(xarFile)
+    const xarName = basename(xarFile)
     await db.app.upload(xarContents, xarName)
     await db.app.install(xarName)
 }
 
 async function remove() {
-	await db.app.remove(appNamespace)
+    await db.app.remove(namespace)
 
-	const result = await Promise.allSettled([
-		db.collections.remove('/db/tuttle-backup'),
-		db.collections.remove('/db/pkgtmp'),
+    const result = await Promise.allSettled([
+        db.collections.remove('/db/tuttle-backup'),
+        db.collections.remove('/db/pkgtmp'),
 
-		db.collections.remove('/db/apps/tuttle-sample-data'),
-		db.collections.remove('/db/apps/tuttle-sample-gitlab'),
-	])
+        db.collections.remove('/db/apps/tuttle-sample-data'),
+        db.collections.remove('/db/apps/tuttle-sample-gitlab'),
+    ])
 
-	if (result.some(r => r.status === 'rejected')) {
-		console.warn('clean up failed', result.filter(r => r.status === 'rejected').map(r => r.reason))
-	}
+    if (result.some(r => r.status === 'rejected')) {
+        console.warn('clean up failed', result
+            .filter(r => r.status === 'rejected')
+            .map(r => r.reason))
+    }
 }
 
-module.exports = {
-    axios: axiosInstance,
-    auth: adminCredentials,
+export {
+    axiosInstance as axios,
+    adminCredentials as auth,
     getResourceInfo,
     putResource,
     install,
     remove,
 };
-//getResourceInfo("/db/apps/tuttle-sample-data/data/F-ham.xml");
