@@ -1,21 +1,21 @@
 /**
  * an example gulpfile to make ant-less existdb package builds a reality
  */
-const { src, dest, watch, series, parallel, lastRun } = require('gulp')
-const { createClient } = require('@existdb/gulp-exist')
-const replace = require('@existdb/gulp-replace-tmpl')
-const zip = require("gulp-zip")
-const rename = require('gulp-rename')
-const del = require('delete')
+import { src, dest, watch, series, parallel, lastRun } from 'gulp'
+import { createClient } from '@existdb/gulp-exist'
+import replace from '@existdb/gulp-replace-tmpl'
+import zip from 'gulp-zip'
+import rename from 'gulp-rename'
+import del from 'delete'
 
-const pkg = require('./package.json')
+import pkg from './package.json' with { type: 'json' }
 const { app, version, license } = pkg
 const replacements = [app, { version, license }]
 
 const packageUri = app.namespace
 
 // read metadata from .existdb.json
-const existJSON = require('./.existdb.json')
+import existJSON from './.existdb.json' with { type: 'json' }
 const serverInfo = existJSON.servers.localhost
 const url = new URL(serverInfo.server)
 const connectionOptions = {
@@ -35,7 +35,6 @@ const existClient = createClient(connectionOptions);
 function clean (cb) {
     del(['build', 'dist'], cb);
 }
-exports.clean = clean
 
 /**
  * replace placeholders
@@ -48,35 +47,31 @@ function templates () {
         .pipe(rename(path => { path.extname = "" }))
         .pipe(dest('build/'))
 }
-exports.templates = templates
 
 function watchTemplates () {
     watch('src/*.tmpl', series(templates))
 }
-exports["watch:tmpl"] = watchTemplates
 
 
-const static = 'src/**/*.{xml,html,xq,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
+const staticFiles = 'src/**/*.{xml,html,xq,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
 
 /**
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
  */
 function copyStatic () {
-    return src(static).pipe(dest('build'))
+    return src(staticFiles).pipe(dest('build'))
 }
-exports.copy = copyStatic
 
 function watchStatic () {
-    watch(static, series(copyStatic));
+    watch(staticFiles, series(copyStatic));
 }
-exports["watch:static"] = watchStatic
 
 /**
  * Upload all files in the build folder to existdb.
  * This function will only upload what was changed
  * since the last run (see gulp documentation for lastRun).
  */
-function deploy () {
+function deployApp () {
     return src('build/**/*', {
         base: 'build/',
         since: lastRun(deploy)
@@ -89,12 +84,12 @@ function watchBuild () {
 }
 
 // construct the current xar name from available data
-const xarFilename = `${app.abbrev}-${pkg.version}.xar`
+const xarFilename = `${app.abbrev}-${version}.xar`
 
 /**
  * create XAR package in repo root
  */
-function xar () {
+function createXar () {
     return src('build/**/*', {base: 'build/'})
         .pipe(zip(xarFilename))
         .pipe(dest('dist'))
@@ -108,24 +103,35 @@ function installXar () {
         .pipe(existClient.install({ packageUri }))
 }
 
+
 // composed tasks
 const build = series(
     clean,
     templates,
     copyStatic
 )
+const deploy = series(build, deployApp)
 const watchAll = parallel(
     watchStatic,
     watchTemplates,
     watchBuild
 )
 
-exports.build = build
-exports.watch = watchAll
+const xar = series(build, createXar)
+const install = series(build, xar, installXar)
 
-exports.deploy = series(build, deploy)
-exports.xar = series(build, xar)
-exports.install = series(build, xar, installXar)
+export {
+ clean,
+ templates,
+ watchTemplates,
+ copyStatic,
+ watchStatic,
+ build,
+ deploy,
+ xar,
+ install,
+ watchAll as watch,
+}
 
 // main task for day to day development
-exports.default = series(build, deploy, watchAll)
+export default series(build, deploy, watchAll)
