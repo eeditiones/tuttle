@@ -67,22 +67,15 @@ declare function github:get-commits($config as map(*), $count as xs:integer) as 
             else if ($count >= array:size($json)) (: return everything :)
             then $json
             else array:subarray($json, 1, $count)
-        
+
         return
             array:for-each($commits, github:short-commit-info#1)
 };
 
 declare %private function github:short-commit-info ($commit-info as map(*)) as array(*) {
     [
-        app:shorten-sha($commit-info?sha),
+        $commit-info?sha,
         $commit-info?commit?message
-    ]
-};
-
-declare %private function github:only-commit-shas ($commit-info as map(*)) as array(*) {
-    [
-        app:shorten-sha($commit-info?sha),
-        $commit-info?sha
     ]
 };
 
@@ -94,21 +87,21 @@ declare function github:get-raw-commits($config as map(*), $count as xs:integer)
         github:commit-ref-url($config, $count), $config?token)
 };
 
-(:~ 
+(:~
  : Get diff between production collection and github-newest
  :)
 declare function github:get-newest-commits($config as map(*)) as xs:string* {
     let $deployed := $config?deployed
     let $commits := github:get-raw-commits($config, 100)
-    let $shas := array:for-each($commits, github:only-commit-shas#1)?*
-    let $how-many := index-of($shas?1, $deployed) - 1
+    let $sha := $commits?*?sha
+    let $how-many := index-of($sha, $deployed) - 1
     return
         if (empty($how-many)) then (
             error(
                 xs:QName("github:commit-not-found"),
                 'The deployed commit hash ' || $deployed || ' was not found in the list of commits on the remote.')
         ) else (
-            reverse(subsequence($shas?2, 1, $how-many))
+            reverse(subsequence($sha, 1, $how-many))
         )
 };
 
@@ -138,7 +131,7 @@ declare function github:get-changes ($collection-config as map(*)) as map(*) {
 
 (:~
  : Handle edge case where a file created in this changeset is also removed
- : 
+ :
  : So, in order to not fire useless and potentially harmful side-effects like
  : triggers or indexing we filter out all of these documents as if they were
  : never there.
@@ -149,7 +142,7 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         let $new := map:put($changes, "new", ($changes?new, $next?filename))
         (: if same file was re-added then remove from it "del" list :)
         return map:put($new, "del", $changes?del[. ne $next?filename])
-    case "modified" return 
+    case "modified" return
         (: add to "new" list, make sure each entry is in there only once :)
         map:put($changes, "new", ($changes?new[. ne $next?filename], $next?filename))
     case "renamed" return
@@ -167,9 +160,9 @@ declare function github:aggregate-filechanges ($changes as map(*), $next as map(
         $changes
 };
 
-(:~ 
+(:~
  : Run incremental update on collection in dry mode
- :) 
+ :)
 declare function github:incremental-dry($config as map(*)) {
     let $changes := github:get-changes($config)
     return map {
@@ -179,15 +172,17 @@ declare function github:incremental-dry($config as map(*)) {
     }
 };
 
-(:~ 
+(:~
  : Run incremental update on collection
- :) 
+ :)
 declare function github:incremental($config as map(*)) {
-    let $sha := github:get-last-commit($config)?sha
+    let $last-commit := github:get-last-commit($config)
+    let $sha := $last-commit?sha
     let $changes := github:get-changes($config)
     let $del := github:incremental-delete($config, $changes?del)
     let $new := github:incremental-add($config, $changes?new, $sha)
-    let $writesha := app:write-sha($config?path, $sha)
+    let $_ := util:log('info', 'Date: "' || $last-commit?commit?author?date || '"')
+    let $writesha := app:write-commit-info($config?path, $sha, xs:dateTime($last-commit?commit?author?date))
     return map {
         'new': array{ $new },
         'del': array{ $del },
@@ -197,7 +192,7 @@ declare function github:incremental($config as map(*)) {
 
 
 (:~
- : Get files removed and added from commit 
+ : Get files removed and added from commit
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     let $url := github:repo-url($config) || "/commits/"  || $sha
@@ -215,11 +210,11 @@ declare variable $github:raw-usercontent-endpoint := "https://raw.githubusercont
  :)
 declare %private function github:get-blob($config as map(*), $filename as xs:string, $sha as xs:string) {
     if (not(starts-with($config?baseurl, "https://api.github.com"))) then (
-        (: for GitHub enterprise we have to query for the download url, this might return the contents directly :) 
+        (: for GitHub enterprise we have to query for the download url, this might return the contents directly :)
         let $blob-url := github:repo-url($config) || "/contents/" || escape-html-uri($filename) || "?ref=" || $sha
         let $json := github:request-json($blob-url, $config?token)
         let $content := $json?content
-    
+
         return
             if ($json?content = "") (: endpoint did not return base64 encoded contents :)
             then github:download-file($json?download_url, $config?token)
@@ -245,7 +240,7 @@ declare function github:get-url($config as map(*)) {
     return $repo-info?html_url
 };
 
-(:~ 
+(:~
  : Check signature for Webhook
  :)
 declare function github:check-signature($collection as xs:string, $apikey as xs:string) as xs:boolean {
@@ -257,12 +252,12 @@ declare function github:check-signature($collection as xs:string, $apikey as xs:
     return $signature = $expected-signature
 };
 
-(:~ 
+(:~
  : Incremental updates delete files
  :)
 declare %private function github:incremental-delete($config as map(*), $files as xs:string*) as array(*)* {
     for $filepath in $files
-    return 
+    return
         try {
             [ $filepath, app:delete-resource($config, $filepath) ]
         }
@@ -283,7 +278,7 @@ declare %private function github:incremental-delete($config as map(*), $files as
  :)
 declare %private function github:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) as array(*)* {
     for $filepath in $files
-    return 
+    return
         try {
             [ $filepath,
                 app:add-resource($config, $filepath,
@@ -315,7 +310,7 @@ declare %private function github:parse-link-header($link-header as xs:string) as
     map:merge(
         tokenize($link-header, ', ')
         ! array { tokenize(., '; ') }
-        ! map { 
+        ! map {
             replace(?2, "rel=""(.*?)""", "$1") : substring(?1, 2, string-length(?1) - 2)
         }
     )
@@ -352,7 +347,7 @@ declare %private function github:request-json-all-pages($url as xs:string, $toke
                 github:auth-header($token))
             ))
 
-    let $next-url := 
+    let $next-url :=
         if (github:has-next-page($response[1])) then (
             github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
         ) else ()
@@ -396,4 +391,3 @@ declare %private function github:auth-header($token as xs:string?) as element(ht
 declare %private function github:build-request($url as xs:string, $headers as element(http:header)*) as element(http:request) {
     <http:request http-version="1.1" href="{$url}" method="get">{ $headers }</http:request>
 };
-

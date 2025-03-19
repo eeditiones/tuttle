@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { auth, axios, putResource, ensureTuttleIsInstalled } from './util.js';
 import { readFile } from 'node:fs/promises';
-import { before, after, describe, it } from 'node:test';
+import { before, describe, it } from 'node:test';
 
 export default describe('Tuttle', function () {
     before(async () => {
@@ -36,7 +36,7 @@ export default describe('Tuttle', function () {
             assert.deepStrictEqual(repos[0], {
                 baseurl: 'https://api.github.com/',
                 collection: defaultCollection,
-                deployed: '5006b2c',
+                deployed: '5006b2cd6552e2b09ba94d597cf89c100de3399e',
                 hookuser: 'admin',
                 message: 'remote found',
                 owner: 'eeditiones',
@@ -105,13 +105,23 @@ export default describe('Tuttle', function () {
     describe('git/status with different settings', function () {
         let res, repos;
 
-        before(async function () {
-            const buffer = await readFile('./test/fixtures/alt-tuttle.xml');
-            await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
-            const buffer2 = await readFile('./test/fixtures/test.xqm');
-            await putResource(buffer2, '/db/apps/tuttle/modules/test.xqm');
-            res = await axios.get('git/status', { auth });
-            repos = res.data.repos;
+        it('github sample repo is up to date', function () {
+            assert.deepStrictEqual(repos[0], {
+                baseurl: 'https://api.github.com/',
+                collection: defaultCollection,
+                deployed: '5006b2cd6552e2b09ba94d597cf89c100de3399e',
+                hookuser: 'admin',
+                message: 'remote found',
+                owner: 'eeditiones',
+                path: `/db/apps/${defaultCollection}`,
+                'project-id': null,
+                ref: 'next',
+                remote: '5006b2c',
+                repo: 'tuttle-sample-data',
+                status: 'uptodate',
+                url: 'https://github.com/eeditiones/tuttle-sample-data',
+                type: 'github',
+            });
         });
 
         it('returns status 200', function () {

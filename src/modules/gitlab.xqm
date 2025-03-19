@@ -18,14 +18,14 @@ declare function gitlab:repo-url($config as map(*)) as xs:string {
   will always return 100 commits, which might result in to much overhead
  :)
 declare function gitlab:commit-ref-url($config as map(*)) as xs:string {
-    gitlab:repo-url($config) || "/commits/?ref_name=" || $config?ref 
+    gitlab:repo-url($config) || "/commits/?ref_name=" || $config?ref
 };
 
 declare function gitlab:commit-ref-url($config as map(*), $per-page as xs:integer) as xs:string {
     gitlab:commit-ref-url($config) || "&amp;per_page=" || $per-page
 };
 
-(: 
+(:
   The Gitlab API allows to specify a revision range as the value for ref_name
   ?ref_name={ref}...{deployed_hash}
   This will only retrieve commits since deployed_hash but the result is paged as well.
@@ -38,7 +38,7 @@ declare function gitlab:newer-commits-url($config as map(*), $base as xs:string,
 };
 
 (:~
- : clone defines Version repo 
+ : clone defines Version repo
  :)
 declare function gitlab:get-archive($config as map(*), $sha as xs:string) {
     gitlab:request(
@@ -56,7 +56,7 @@ declare function gitlab:get-last-commit($config as map(*)) {
 
     return
         map {
-            "sha" : app:shorten-sha($commit?short_id)
+            "sha" : $commit?id
         }
 };
 
@@ -81,14 +81,14 @@ declare function gitlab:get-commits($config as map(*), $count as xs:integer) as 
             else if ($count >= array:size($json)) (: return everything :)
             then $json
             else array:subarray($json, 1, $count)
-        
+
         return
             array:for-each($commits, gitlab:short-commit-info#1)
 };
 
 declare %private function gitlab:short-commit-info ($commit-info as map(*)) as array(*) {
     [
-        app:shorten-sha($commit-info?short_id),
+        $commit-info?id,
         $commit-info?message
     ]
 };
@@ -101,7 +101,7 @@ declare function gitlab:get-raw-commits($config as map(*), $count as xs:integer)
         gitlab:commit-ref-url($config, $count), $config?token)
 };
 
-(:~ 
+(:~
  : Get diff between production collection and gitlab-newest
  :)
 declare function gitlab:get-newest-commits($config as map(*)) {
@@ -111,15 +111,15 @@ declare function gitlab:get-newest-commits($config as map(*)) {
         ?*)
 };
 
-(:~ 
+(:~
  : Check if sha exist
  :)
 declare function gitlab:available-sha($config as map(*), $sha as xs:string) as xs:boolean {
     $sha = gitlab:get-commits($config)?*?1
 };
 
-(:~ 
- : Get files removed and added from commit 
+(:~
+ : Get files removed and added from commit
  :)
 declare function gitlab:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     gitlab:request-json(
@@ -134,7 +134,7 @@ declare function gitlab:get-blob($config as map(*), $filename as xs:string, $sha
     let $file-url := gitlab:repo-url($config) || "/files/" || $file || "?ref=" || $sha
     let $json := gitlab:request-json($file-url, $config?token)
 
-    return 
+    return
         util:base64-decode($json?content)
 };
 
@@ -143,13 +143,13 @@ declare function gitlab:get-blob($config as map(*), $filename as xs:string, $sha
  :)
 declare function gitlab:get-url($config as map(*)) {
     let $info := gitlab:request-json($config?baseurl || "/projects/" || $config?project-id, $config?token)
-    
+
     return $info?http_url_to_repo
 };
 
 (:~
  : Handle edge case where a file created in this changeset is also removed
- : 
+ :
  : So, in order to not fire useless and potentially harmful side-effects like
  : triggers or indexing we filter out all of these documents as if they were
  : never there.
@@ -186,9 +186,9 @@ declare function gitlab:get-changes ($collection-config as map(*)) as map(*) {
     }
 };
 
-(:~ 
+(:~
  : Run incremental update on collection in dry mode
- :) 
+ :)
 declare function gitlab:incremental-dry($config as map(*)) as map(*) {
     let $changes := gitlab:get-changes($config)
     return map {
@@ -198,15 +198,16 @@ declare function gitlab:incremental-dry($config as map(*)) as map(*) {
     }
 };
 
-(:~ 
+(:~
  : Run incremental update on collection
  :)
 declare function gitlab:incremental($config as map(*)) as map(*) {
-    let $sha := gitlab:get-last-commit($config)?sha
+        let $last-commit :=    gitlab:get-last-commit($config)
+    let $sha := $last-commit?sha
     let $changes := gitlab:get-changes($config)
     let $new := gitlab:incremental-add($config, $changes?new, $sha)
     let $del := gitlab:incremental-delete($config, $changes?del)
-    let $writesha := app:write-sha($config?path, $sha)
+        let $writesha := app:write-commit-info($config?path, $sha, $last-commit?timestamp) => util:log('INFO', ?)
     return map {
         'new': array{ $new },
         'del': array{ $del },
@@ -218,12 +219,12 @@ declare function gitlab:check-signature ($collection as xs:string, $apikey as xs
     request:get-header("X-Gitlab-Token") = $apikey
 };
 
-(:~ 
+(:~
  : Incremental updates delete files
  :)
 declare %private function gitlab:incremental-delete($config as map(*), $files as xs:string*) as array(*)* {
     for $filepath in $files
-    return 
+    return
         try {
             [ $filepath, app:delete-resource($config, $filepath) ]
         }
@@ -240,7 +241,7 @@ declare %private function gitlab:incremental-delete($config as map(*), $files as
  :)
 declare %private function gitlab:incremental-add($config as map(*), $files as xs:string*, $sha as xs:string) as array(*)* {
     for $filepath in $files
-    return 
+    return
         try {
             [ $filepath,
                 app:add-resource($config, $filepath,

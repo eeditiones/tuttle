@@ -75,6 +75,7 @@ async function install() {
     console.log('Uploading tuttle');
     await db.app.upload(xarContents, xarName);
     console.log('Uploaded tuttle, installing');
+
     await db.app.install(xarName);
 }
 
@@ -102,13 +103,20 @@ async function remove() {
  */
 let tuttleInstallationPromise = null;
 
-export async function ensureTuttleIsInstalled() {
+async function ensureTuttleIsInstalled() {
     if (!tuttleInstallationPromise) {
         console.log('installing tuttle');
-        tuttleInstallationPromise = remove().then(() => install());
+        tuttleInstallationPromise = install();
     }
+    console.log('Waiting until tuttle install is done');
     await tuttleInstallationPromise;
     console.log('done installing tuttle');
 }
 
-export { axiosInstance as axios, adminCredentials as auth, getResourceInfo, putResource, install };
+export {
+    axiosInstance as axios,
+    adminCredentials as auth,
+    getResourceInfo,
+    putResource,
+    ensureTuttleIsInstalled,
+};

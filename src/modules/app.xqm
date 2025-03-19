@@ -19,7 +19,7 @@ declare function app:ignore-reducer($res, $next) {
 };
 
 declare function app:extract-archive($zip as xs:base64Binary, $collection as xs:string) {
-    compression:unzip($zip, 
+    compression:unzip($zip,
         app:unzip-filter#3, config:ignore(),
         app:unzip-store#4, $collection)
 };
@@ -48,7 +48,7 @@ declare function app:unzip-store($path as xs:string, $data-type as xs:string, $d
  : Filter out ignored resources
  : returning true() _will_ extract the file or folder
  :)
-declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $ignore as xs:string*) as xs:boolean { 
+declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $ignore as xs:string*) as xs:boolean {
     not(substring-after($path, '/') = $ignore)
 };
 
@@ -56,13 +56,13 @@ declare function app:unzip-filter($path as xs:string, $data-type as xs:string, $
  : Move staging collection to final collection
  :)
 declare function app:move-collection($collection-source as xs:string, $collection-target as xs:string) {
-    xmldb:get-child-collections($collection-source) 
+    xmldb:get-child-collections($collection-source)
         ! xmldb:move($collection-source || "/" || ., $collection-target),
-    xmldb:get-child-resources($collection-source) 
+    xmldb:get-child-resources($collection-source)
         ! xmldb:move($collection-source, $collection-target, .)
 };
 
-(:~ 
+(:~
  : Cleanup destination collection - delete collections from target collection
  :)
 declare function app:cleanup-collection($collection as xs:string) {
@@ -80,22 +80,22 @@ declare function app:cleanup-collection($collection as xs:string) {
  :)
 declare function app:random-key($length as xs:int) {
     let $secret :=
-        for $loop in 1 to $length 
+        for $loop in 1 to $length
             let $random1 := util:random(9)+48
             let $random2 := util:random(25)+65
             let $random3 := util:random(25)+97
-            return 
+            return
                 if (util:random(2) = 1) then
                     fn:codepoints-to-string(($random2))
-                else if (util:random(2) = 1) then 
+                else if (util:random(2) = 1) then
                     fn:codepoints-to-string(($random3))
                 else
                     fn:codepoints-to-string(($random1))
-                
+
     return string-join($secret)
 };
 
-(:~ 
+(:~
  : Write api key to config:apikeys()
  :)
 declare function app:write-apikey($collection as xs:string, $apikey as xs:string) {
@@ -104,7 +104,7 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
         let $apikey-resource := xmldb:encode(replace(config:apikeys(), $collection-prefix, ""))
         let $collection-check := collection:create($collection-prefix)
 
-        return 
+        return
             if (doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()) then
                 update replace doc(config:apikeys())//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
             else if (doc(config:apikeys())//apikeys) then
@@ -119,7 +119,7 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
     catch * {
         map {
             "_error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
@@ -146,7 +146,7 @@ declare function app:lock-remove($collection as xs:string) {
 };
 
 (:~
- : Set permissions to collection recursively 
+ : Set permissions to collection recursively
  :)
 declare function app:set-permission($collection as xs:string) {
     let $permissions := app:get-permissions($collection)
@@ -192,29 +192,58 @@ declare function app:set-permission($collection as xs:string, $resource as xs:st
 };
 
 (:~
- : Write sha
+ : Write sha and commit time to repo.xml file
  :)
-declare function app:write-sha($collection as xs:string, $git-sha as xs:string) {
-    xmldb:store($collection, "gitsha.xml",
-        <hash>
-            <value>{ app:shorten-sha($git-sha) }</value>
-        </hash>
-    )
+declare function app:write-commit-info($collection as xs:string, $git-sha as xs:string, $commit-time as xs:dateTime) {
+    let $timestamp := round(( $commit-time - xs:dateTime('1970-01-01T00:00:00') ) div xs:dayTimeDuration('PT1S'))
+    (: Check presence of repo.xml. If absent, write to gitsha.xml. @TODO: And add tests for both cases :)
+    return
+        if (doc-available($collection || 'repo.xml')) then
+            let $repoXML := doc($collection || 'repo.xml')/repo
+            let $updated := <repo>{
+                        $repoXML/@* except ($repoXML/@commit-id, $repoXML/@commit-time, $repoXML/@commit-timestamp),
+                        attribute {commit-id} {$git-sha},
+                        attribute {commit-time} {$timestamp},
+                        attribute {commit-dateTime} {$commit-time},
+                        $repoXML/node()
+                    }</repo>
+
+                return xmldb:store($collection, "repo.xml", $updated)
+            else
+                let $contents := <hash>
+                        <value>{ $git-sha }</value>
+                        <timestamp>{$timestamp}</timestamp>
+                        <dateTime>{$commit-time}</dateTime>
+                    </hash>
+                (: No repo.xml. Instead, update (or create) gitsha.xml :)
+                return xmldb:store($collection, "gitsha.xml", $contents)
 };
 
-(:~
- : shorten commit hash in the same way as git does
- : this will ensure that gitsha.xml created from external tools are recognized
- :)
-declare function app:shorten-sha($git-sha as xs:string?) as xs:string? {
-    substring($git-sha, 1, 7)
+declare function app:read-commit-info($collection) as map(*)? {
+    (: Read from repo.xml if it exists. If absent, read from gitsha.xml :)
+    if (doc-available($collection || '/repo.xml')) then
+        let $repoXML := doc($collection || '/repo.xml')/repo
+        return map {
+            "id": $repoXML/@commit-id => string(),
+            "dateTime": $repoXML/@commit-dateTime => xs:dateTime(),
+            "timestamp": $repoXML/@commit-time => number()
+        }
+    else if (doc-available($collection || '/gitsha.xml')) then
+        let $gitSha := doc($collection || '/gitsha.xml')/hash
+        return map {
+            "id": $gitSha/value => string(),
+            "dateTime": $gitSha/dateTime => xs:dateTime(),
+            "timestamp": $gitSha/timestamp => number()
+        }
+    else
+        ()
 };
 
 declare function app:request-json($request as element(http:request)) {
     let $raw := app:request($request)
     let $decoded := util:base64-decode($raw[2])
     let $json := parse-json($decoded)
-    
+
     return ($raw[1], $json)
 };
 
@@ -252,7 +281,7 @@ declare %private function app:file-to-resource($base as xs:string, $filepath as 
 declare function app:delete-resource($config as map(*), $filepath as xs:string) as xs:boolean {
     let $resource := app:file-to-resource($config?path, $filepath)
     let $remove := xmldb:remove($resource?collection, $resource?name)
-    let $remove-empty-col := 
+    let $remove-empty-col :=
         if (empty(xmldb:get-child-resources($resource?collection))) then (
             xmldb:remove($resource?collection)
         ) else ()
@@ -266,7 +295,7 @@ declare function app:delete-resource($config as map(*), $filepath as xs:string) 
 declare function app:add-resource($config as map(*), $filepath as xs:string, $data as item()) as xs:boolean {
     let $resource := app:file-to-resource($config?path, $filepath)
     let $permissions := app:get-permissions($config?path)
-    let $collection-check := 
+    let $collection-check :=
         if (xmldb:collection-available($resource?collection)) then ()
         else (
             collection:create($resource?collection),

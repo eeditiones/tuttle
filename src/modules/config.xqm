@@ -45,9 +45,12 @@ declare function config:collections($collection-name as xs:string) as map(*)? {
 : Which commit is deployed?
 :)
 declare function config:deployed-sha($path as xs:string) as xs:string? {
-    if (doc-available($path || "/gitsha.xml"))
-    then doc($path || "/gitsha.xml")/hash/value/string()
-    else ()
+    (: @TODO: shares a lot of code with app.xqm app:read-commit-info :)
+    if (doc-available($path || "/repo.xml"))
+    then doc($path || "/repo.xml")/repo/@commit-id/string()
+    else if (doc-available($path || "/gitsha.xml"))
+        then doc($path || "/gitsha.xml")/hash/value/string()
+        else ('NOTHING AVAILABLE at ' || $path)
 };
 
 declare function config:get-callback($config as map(*)) as function(*)? {
@@ -75,20 +78,20 @@ declare function config:get-callback($config as map(*)) as function(*)? {
             }
 
         let $import-options :=
-            map { "location-hints" : 
+            map { "location-hints" :
                 if (exists($collection-config/callback/@location))
                 then $collection-config/callback/@location/string()
                 else "/db/apps/tuttle/content/callbacks.xqm"
             }
         (: get function reference :)
-        let $module := 
+        let $module :=
             try {
                 fn:load-xquery-module($ns, $import-options)
             } catch * {
                 error((), "Problem loading the callback for collection " || $collection-config/@name)
             }
 
-        return 
+        return
             if (
                 (: exists($module) and  :)
                 (: map:contains($module, "functions") and
@@ -143,14 +146,14 @@ declare function config:ignore() as xs:string* {
 };
 
 (:~
- : Suffix of the checked out git statging collection 
+ : Suffix of the checked out git statging collection
  :)
 declare function config:suffix() as xs:string {
     $config:tuttle-config/config/@suffix/string()
 };
 
 (:~
- : The running task is stored in the lockfile. It ensures that two tasks do not run at the same time. 
+ : The running task is stored in the lockfile. It ensures that two tasks do not run at the same time.
  :)
 declare function config:lock() as xs:string {
     $config:tuttle-config/config/@lock/string()
@@ -182,4 +185,3 @@ declare function config:sm() as map(*) {
         "mode" : $sm/@mode/string()
     }
 };
-
