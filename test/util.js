@@ -1,6 +1,7 @@
 import { Agent } from 'node:https';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
+import { after, before } from 'node:test';
 
 import axios from 'axios';
 import { connect } from '@existdb/node-exist';
@@ -59,6 +60,14 @@ function getResourceInfo(resource) {
     return db.resources.describe(resource);
 }
 
+/**
+ * @param {string} resource
+ * @returns {Promise<string>}
+ */
+function getResource(resource) {
+    return db.documents.read(resource);
+}
+
 async function install() {
     const matches = (await readdir('dist')).filter((entry) => entry.endsWith('.xar'));
 
@@ -80,6 +89,7 @@ async function install() {
 }
 
 async function remove() {
+    console.log('removing');
     await db.app.remove(namespace);
 
     const result = await Promise.allSettled([
@@ -102,12 +112,19 @@ async function remove() {
  * @type {Promise void>}
  */
 let tuttleInstallationPromise = null;
+let tuttleIsInstalled = false;
 
 async function ensureTuttleIsInstalled() {
     if (!tuttleInstallationPromise) {
-        console.log('installing tuttle');
-        tuttleInstallationPromise = install();
+        console.log('installing tuttle', tuttleInstallationPromise, tuttleIsInstalled);
+
+        tuttleInstallationPromise = remove().then(() => install());
+        await tuttleInstallationPromise;
+        tuttleIsInstalled = true;
+        return;
     }
+    console.log('Not installing tuttle twice');
+
     console.log('Waiting until tuttle install is done');
     await tuttleInstallationPromise;
     console.log('done installing tuttle');
@@ -118,5 +135,8 @@ export {
     adminCredentials as auth,
     getResourceInfo,
     putResource,
+    getResource,
     ensureTuttleIsInstalled,
+    remove,
+    install,
 };
