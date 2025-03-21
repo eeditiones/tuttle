@@ -170,14 +170,31 @@ export default () =>
             });
         });
     });
+await it.only('can also write hashes to repo.xml', async () => {
+    await remove();
+    await install();
 
+    // Set up tuttle with a repo where repo.xml is used to store the git sha info
+    const buffer = await readFile('./test/fixtures/alt-repoxml-tuttle.xml');
+    await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
 
+    const resultPromise = axios.get('git/status', { auth });
+    await assert.doesNotReject(resultPromise);
 
+    const res = await resultPromise;
 
+    console.log(res.data);
 
+    const stagingPromise = axios.get(`git/tuttle-sample-data`, {}, { auth });
+    await assert.doesNotReject(stagingPromise, 'The request should succeed');
 
     console.log((await stagingPromise).data);
 
+    const deployPromise = axios.post(`git/tuttle-sample-data`, {}, { auth });
+    await assert.doesNotReject(deployPromise, 'The request should succeed');
 
+    console.log((await deployPromise).data);
 
+    const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');
+    console.log(repoXML);
 });
