@@ -198,16 +198,15 @@ declare function app:write-commit-info($collection as xs:string, $git-sha as xs:
     let $timestamp := round(( $commit-time - xs:dateTime('1970-01-01T00:00:00') ) div xs:dayTimeDuration('PT1S'))
     (: Check presence of repo.xml. If absent, write to gitsha.xml. @TODO: And add tests for both cases :)
     return
-        if (doc-available($collection || 'repo.xml')) then
-            let $repoXML := doc($collection || 'repo.xml')/repo
-            let $updated := <repo>{
+        if (doc-available($collection || '/repo.xml')) then
+            let $repoXML := doc($collection || '/repo.xml')/*
+            let $updated := <meta xmlns="http://exist-db.org/xquery/repo">{
                         $repoXML/@* except ($repoXML/@commit-id, $repoXML/@commit-time, $repoXML/@commit-timestamp),
-                        attribute {commit-id} {$git-sha},
-                        attribute {commit-time} {$timestamp},
-                        attribute {commit-dateTime} {$commit-time},
+                        attribute commit-id {$git-sha},
+                        attribute commit-time {$timestamp},
+                        attribute commit-dateTime {$commit-time},
                         $repoXML/node()
-                    }</repo>
-
+                    }</meta>
                 return xmldb:store($collection, "repo.xml", $updated)
             else
                 let $contents := <hash>

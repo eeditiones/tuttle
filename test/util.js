@@ -65,7 +65,7 @@ function getResourceInfo(resource) {
  * @returns {Promise<string>}
  */
 function getResource(resource) {
-    return db.documents.read(resource);
+    return db.documents.read(resource, {});
 }
 
 async function install() {

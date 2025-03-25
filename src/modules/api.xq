@@ -202,11 +202,13 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
                     $actions?get-last-commit($config)?sha
                 )
 
-    (: @TODO: Figure out the commit dateTime :)
-            let $write-sha := app:write-commit-info($staging-collection, $sha, current-dateTime())
-
             let $zip := $actions?get-archive($config, $sha)
             let $extract := app:extract-archive($zip, $staging-collection)
+
+            (: @TODO: Figure out the commit dateTime :)
+            let $_ := util:log('info', 'done deploying xar')
+            let $write-sha := app:write-commit-info($staging-collection, $sha, current-dateTime())
+            let $_ := util:log('info', 'done writing commit info')
 
             let $remove-lock := app:lock-remove($config?collection)
             return map {
@@ -217,7 +219,8 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
         )
     }
     catch * {
-        map {
+        let $_ := util:log('error', 'Error occured while deploying ' || $err:description)
+        return map {
             "message": $err:description,
             "error": map {
                 "code": $err:code, "description": $err:description, "value": $err:value,

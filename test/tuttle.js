@@ -3,7 +3,6 @@ import {
     auth,
     axios,
     ensureTuttleIsInstalled,
-    getResourceInfo,
     getResource,
     install,
     putResource,
@@ -11,6 +10,8 @@ import {
 } from './util.js';
 import { before, describe, it } from 'node:test';
 import { readFile } from 'node:fs/promises';
+
+import { DOMParser } from 'slimdom';
 
 export default () =>
     describe('Tuttle', async function () {
@@ -181,20 +182,16 @@ await it.only('can also write hashes to repo.xml', async () => {
     const resultPromise = axios.get('git/status', { auth });
     await assert.doesNotReject(resultPromise);
 
-    const res = await resultPromise;
-
-    console.log(res.data);
-
     const stagingPromise = axios.get(`git/tuttle-sample-data`, {}, { auth });
     await assert.doesNotReject(stagingPromise, 'The request should succeed');
-
-    console.log((await stagingPromise).data);
 
     const deployPromise = axios.post(`git/tuttle-sample-data`, {}, { auth });
     await assert.doesNotReject(deployPromise, 'The request should succeed');
 
-    console.log((await deployPromise).data);
-
     const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');
-    console.log(repoXML);
+
+    const repo = new DOMParser().parseFromString(repoXML.toString(), 'text/xml').documentElement;
+    assert.ok(repo.getAttribute('commit-id'), 'The commit id should be set');
+    assert.ok(repo.getAttribute('commit-time'), 'The commit time should be set');
+    assert.ok(repo.getAttribute('commit-dateTime'), 'The commit dateTime should be set');
 });
