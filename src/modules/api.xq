@@ -205,12 +205,8 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
             let $zip := $actions?get-archive($config, $sha)
             let $extract := app:extract-archive($zip, $staging-collection)
 
-            (: @TODO: Figure out the commit dateTime :)
-            let $_ := util:log('info', 'done deploying xar')
-            let $write-sha := app:write-commit-info($staging-collection, $sha, current-dateTime())
-            let $_ := util:log('info', 'done writing commit info')
-
             let $remove-lock := app:lock-remove($config?collection)
+
             return map {
                 "message" : "success",
                 "hash": $sha,
