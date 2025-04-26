@@ -170,28 +170,31 @@ export default () =>
                 });
             });
         });
+
+        await it('can also write hashes to repo.xml', async () => {
+            await remove();
+            await install();
+        
+            // Set up tuttle with a repo where repo.xml is used to store the git sha info
+            const buffer = await readFile('./test/fixtures/alt-repoxml-tuttle.xml');
+            await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
+        
+            const resultPromise = axios.get('git/status', { auth });
+            await assert.doesNotReject(resultPromise);
+        
+            const stagingPromise = axios.get(`git/tuttle-sample-data`, {}, { auth });
+            await assert.doesNotReject(stagingPromise, 'The request should succeed');
+        
+            const deployPromise = axios.post(`git/tuttle-sample-data`, {}, { auth });
+            await assert.doesNotReject(deployPromise, 'The request should succeed');
+        
+            const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');
+        
+            const repo = new DOMParser().parseFromString(repoXML.toString(), 'text/xml').documentElement;
+            assert.ok(repo.getAttribute('commit-id'), 'The commit id should be set');
+            assert.ok(repo.getAttribute('commit-time'), 'The commit time should be set');
+            assert.ok(repo.getAttribute('commit-dateTime'), 'The commit dateTime should be set');
+        });
+        
     });
-await it.only('can also write hashes to repo.xml', async () => {
-    await remove();
-    await install();
 
-    // Set up tuttle with a repo where repo.xml is used to store the git sha info
-    const buffer = await readFile('./test/fixtures/alt-repoxml-tuttle.xml');
-    await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
-
-    const resultPromise = axios.get('git/status', { auth });
-    await assert.doesNotReject(resultPromise);
-
-    const stagingPromise = axios.get(`git/tuttle-sample-data`, {}, { auth });
-    await assert.doesNotReject(stagingPromise, 'The request should succeed');
-
-    const deployPromise = axios.post(`git/tuttle-sample-data`, {}, { auth });
-    await assert.doesNotReject(deployPromise, 'The request should succeed');
-
-    const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');
-
-    const repo = new DOMParser().parseFromString(repoXML.toString(), 'text/xml').documentElement;
-    assert.ok(repo.getAttribute('commit-id'), 'The commit id should be set');
-    assert.ok(repo.getAttribute('commit-time'), 'The commit time should be set');
-    assert.ok(repo.getAttribute('commit-dateTime'), 'The commit dateTime should be set');
-});
