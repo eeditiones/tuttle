@@ -225,7 +225,7 @@ declare function gitlab:incremental($config as map(*)) as map(*) {
     let $changes := gitlab:get-changes($config)
     let $new := gitlab:incremental-add($config, $changes?new, $last-commit?sha)
     let $del := gitlab:incremental-delete($config, $changes?del)
-    let $writesha := app:write-commit-info($config?path, $last-commit?sha, $last-commit?date)
+    let $writesha := app:write-commit-info($config?path, $last-commit)
     return map {
         'new': array{ $new },
         'del': array{ $del },

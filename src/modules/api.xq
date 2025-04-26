@@ -204,7 +204,7 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
 
             let $zip := $actions?get-archive($config, $commit?sha)
             let $extract := app:extract-archive($zip, $staging-collection)
-            let $_ := app:write-commit-info($staging-collection, $commit?sha, $commit?date)
+            let $_ := app:write-commit-info($staging-collection, $commit)
 
             let $remove-lock := app:lock-remove($config?collection)
 
