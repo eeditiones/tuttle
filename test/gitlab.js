@@ -7,7 +7,7 @@ export default () =>
         before(async () => {
             await ensureTuttleIsInstalled();
         });
-        const testHASH = '79789e5';
+        const testHASH = '79789e5c4842afaaa63c733c3ed6babe37f70121';
         const collection = 'tuttle-sample-gitlab';
 
         it('Remove lockfile', async function () {

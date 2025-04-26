@@ -67,16 +67,18 @@ export default () =>
                 assert.deepStrictEqual(repos[1], {
                     baseurl: 'https://gitlab.com/api/v4/',
                     collection: 'tuttle-sample-gitlab',
-                    deployed: null,
+                    deployed: 'd80c71f0ac63d355f1583cfe2777fe3dcde4d8bc',
                     hookuser: 'admin',
-                    message: 'server connection failed: Forbidden (403)',
+                    message: 'remote found',
                     owner: 'line-o',
                     path: '/db/apps/tuttle-sample-gitlab',
                     'project-id': '50872175',
                     ref: 'main',
+                    remote: 'd80c71f0ac63d355f1583cfe2777fe3dcde4d8bc',
                     repo: 'tuttle-sample-data',
-                    status: 'error',
+                    status: 'uptodate',
                     type: 'gitlab',
+                    url: 'https://gitlab.com/line-o/tuttle-sample-data.git'
                 });
             });
         });

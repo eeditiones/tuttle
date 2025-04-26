@@ -201,11 +201,10 @@ declare function github:incremental-dry($config as map(*)) {
  :)
 declare function github:incremental($config as map(*)) {
     let $last-commit := github:get-last-commit($config)
-    let $sha := $last-commit?sha
     let $changes := github:get-changes($config)
     let $del := github:incremental-delete($config, $changes?del)
-    let $new := github:incremental-add($config, $changes?new, $sha)
-    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?date)
+    let $new := github:incremental-add($config, $changes?new, $last-commit?sha)
+    let $writesha := app:write-commit-info($config?path, $last-commit?sha, $last-commit?date)
     return map {
         'new': array{ $new },
         'del': array{ $del },
