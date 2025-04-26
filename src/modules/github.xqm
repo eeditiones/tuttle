@@ -13,6 +13,10 @@ declare function github:repo-url($config as map(*)) as xs:string {
     ``[`{$config?baseurl}`repos/`{$config?owner}`/`{$config?repo}`]``
 };
 
+declare function github:commit-by-ref-url($config as map(*), $ref as xs:string) as xs:string {
+    github:repo-url($config) || "/commits/" || $ref
+};
+
 (:
   The `commits` API endpoint is _paged_ and will only return _30_ commits by default
   it is possible to add the parameter `&per_page=100` (100 being the maximum)
@@ -38,12 +42,32 @@ declare function github:get-archive($config as map(*), $sha as xs:string) as xs:
 };
 
 (:~
+ : Get commit info for a specific sha
+ :)
+declare function github:get-specific-commit($config as map(*), $ref as xs:string) as map(*) {
+    let $commit :=
+        github:request-json-ignore-pages(
+            github:commit-by-ref-url($config, $ref), $config?token)
+
+    return map {
+        "sha" : $commit?sha,
+        "date": $commit?commit?committer?date
+    }
+};
+
+(:~
  : Get the last commit
  :)
 declare function github:get-last-commit($config as map(*)) as map(*) {
-    array:head(
-        github:request-json-ignore-pages(
-            github:commit-ref-url($config, 1), $config?token))
+    let $commit :=
+        array:head(
+            github:request-json-ignore-pages(
+                github:commit-ref-url($config, 1), $config?token))
+
+    return map {
+        "sha" : $commit?sha,
+        "date": $commit?committer?date
+    }
 };
 
 (:~

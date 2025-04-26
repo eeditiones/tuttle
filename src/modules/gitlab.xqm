@@ -8,8 +8,11 @@ import module namespace config="http://e-editiones.org/tuttle/config" at "config
 declare namespace http="http://expath.org/ns/http-client";
 
 declare function gitlab:repo-url($config as map(*)) as xs:string {
-    $config?baseurl || string-join(
-        ("projects", $config?project-id, "repository"), "/")
+    ``[`{$config?baseurl}`projects/`{$config?project-id}`/repository]``
+};
+
+declare function gitlab:commit-by-ref-url($config as map(*), $ref as xs:string) as xs:string {
+    gitlab:repo-url($config) || "/commits/" || $ref
 };
 
 (:
@@ -46,6 +49,21 @@ declare function gitlab:get-archive($config as map(*), $sha as xs:string) {
 };
 
 (:~
+ : Get commit info for a specific sha
+ :)
+declare function gitlab:get-specific-commit($config as map(*), $ref as xs:string) as map(*) {
+    let $commit :=
+        gitlab:request-json(
+            gitlab:commit-by-ref-url($config, $ref), $config?token)
+
+    return
+        map {
+            "sha" : $commit?id,
+            "date": $commit?committed_date
+        }
+};
+
+(:~
  : Get the last commit
  :)
 declare function gitlab:get-last-commit($config as map(*)) {
@@ -53,12 +71,11 @@ declare function gitlab:get-last-commit($config as map(*)) {
         array:head(
             gitlab:request-json(
                 gitlab:commit-ref-url($config, 1), $config?token))
-		let $_ := util:log('info', $commit)
 
     return
         map {
             "sha" : $commit?id,
-						"timestamp": xs:dateTime($commit?created_at)
+            "date": $commit?committed_date
         }
 };
 
