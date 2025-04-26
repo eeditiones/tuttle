@@ -1,45 +1,41 @@
-import { Agent } from 'node:https'
-import { readFile, readdir } from 'node:fs/promises'
-import { join, basename } from 'node:path'
+import { Agent } from 'node:https';
+import { readFile, readdir } from 'node:fs/promises';
+import { join, basename } from 'node:path';
+import { after, before } from 'node:test';
 
-import axios from 'axios'
-import { connect } from '@existdb/node-exist'
+import axios from 'axios';
+import { connect } from '@existdb/node-exist';
 
-import existJson from '../.existdb.json' with { type: 'json' }
-const { user, password, server } = existJson.servers.localhost
+import existJson from '../.existdb.json' with { type: 'json' };
+const { user, password, server } = existJson.servers.localhost;
 
-import pkg from '../package.json' with { type: 'json' }
-const { namespace } = pkg.app
+import pkg from '../package.json' with { type: 'json' };
+const { namespace } = pkg.app;
 
 // for use in custom controller tests
-const adminCredentials = { username: user, password }
+const adminCredentials = { username: user, password };
 
 // read connction options from ENV
 if (process.env.EXISTDB_USER && 'EXISTDB_PASS' in process.env) {
-    adminCredentials.username = process.env.EXISTDB_USER
-    adminCredentials.password = process.env.EXISTDB_PASS
+    adminCredentials.username = process.env.EXISTDB_USER;
+    adminCredentials.password = process.env.EXISTDB_PASS;
 }
 
-const testServer = 'EXISTDB_SERVER' in process.env
-    ? process.env.EXISTDB_SERVER
-    : server
+const testServer = 'EXISTDB_SERVER' in process.env ? process.env.EXISTDB_SERVER : server;
 
-const { origin, hostname, port, protocol } = new URL(testServer)
+const { origin, hostname, port, protocol } = new URL(testServer);
 
 const axiosInstanceOptions = {
     baseURL: `${origin}/exist/apps/tuttle`,
     headers: { Origin: origin },
-    withCredentials: true
-}
+    withCredentials: true,
+};
 
-const rejectUnauthorized = !(
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1'
-)
-const secure = protocol === 'https:'
+const rejectUnauthorized = !(hostname === 'localhost' || hostname === '127.0.0.1');
+const secure = protocol === 'https:';
 
 if (secure) {
-    axiosInstanceOptions.httpsAgent = new Agent({ rejectUnauthorized })
+    axiosInstanceOptions.httpsAgent = new Agent({ rejectUnauthorized });
 }
 
 const axiosInstance = axios.create(axiosInstanceOptions);
@@ -51,38 +47,50 @@ const db = connect({
     rejectUnauthorized,
     basic_auth: {
         user: adminCredentials.username,
-        pass: adminCredentials.password
-    }
-})
+        pass: adminCredentials.password,
+    },
+});
 
-async function putResource (buffer, path) {
-    const fh = await db.documents.upload(buffer)
-    return await db.documents.parseLocal(fh, path, {})
+async function putResource(buffer, path) {
+    const fh = await db.documents.upload(buffer);
+    return await db.documents.parseLocal(fh, path, {});
 }
 
-function getResourceInfo (resource) {
-    return db.resources.describe(resource)
+function getResourceInfo(resource) {
+    return db.resources.describe(resource);
 }
 
-async function install () {
-    const matches = (await readdir('dist')).filter(entry => entry.endsWith('.xar'))
+/**
+ * @param {string} resource
+ * @returns {Promise<string>}
+ */
+function getResource(resource) {
+    return db.documents.read(resource, {});
+}
+
+async function install() {
+    const matches = (await readdir('dist')).filter((entry) => entry.endsWith('.xar'));
 
     if (matches.length > 1) {
-        throw new Error(`Multiple tuttle versions: ${matches}`)
+        throw new Error(`Multiple tuttle versions: ${matches}`);
     }
     if (matches.length === 0) {
-        throw new Error(`No tuttle.xar found. Run 'npm build' before running tests`)
+        throw new Error(`No tuttle.xar found. Run 'npm build' before running tests`);
     }
 
-    const xarFile = join('dist', matches[0])
-    const xarContents = await readFile(xarFile)
-    const xarName = basename(xarFile)
-    await db.app.upload(xarContents, xarName)
-    await db.app.install(xarName)
+    const xarFile = join('dist', matches[0]);
+    const xarContents = await readFile(xarFile);
+    const xarName = basename(xarFile);
+    console.log('Uploading tuttle');
+    await db.app.upload(xarContents, xarName);
+    console.log('Uploaded tuttle, installing');
+
+    await db.app.install(xarName);
 }
 
 async function remove() {
-    await db.app.remove(namespace)
+    console.log('removing');
+    await db.app.remove(namespace);
 
     const result = await Promise.allSettled([
         db.collections.remove('/db/tuttle-backup'),
@@ -90,13 +98,36 @@ async function remove() {
 
         db.collections.remove('/db/apps/tuttle-sample-data'),
         db.collections.remove('/db/apps/tuttle-sample-gitlab'),
-    ])
+    ]);
 
-    if (result.some(r => r.status === 'rejected')) {
-        console.warn('clean up failed', result
-            .filter(r => r.status === 'rejected')
-            .map(r => r.reason))
+    if (result.some((r) => r.status === 'rejected')) {
+        console.warn(
+            'clean up failed',
+            result.filter((r) => r.status === 'rejected').map((r) => r.reason),
+        );
     }
+}
+
+/**
+ * @type {Promise void>}
+ */
+let tuttleInstallationPromise = null;
+let tuttleIsInstalled = false;
+
+async function ensureTuttleIsInstalled() {
+    if (!tuttleInstallationPromise) {
+        console.log('installing tuttle', tuttleInstallationPromise, tuttleIsInstalled);
+
+        tuttleInstallationPromise = remove().then(() => install());
+        await tuttleInstallationPromise;
+        tuttleIsInstalled = true;
+        return;
+    }
+    console.log('Not installing tuttle twice');
+
+    console.log('Waiting until tuttle install is done');
+    await tuttleInstallationPromise;
+    console.log('done installing tuttle');
 }
 
 export {
@@ -104,6 +135,8 @@ export {
     adminCredentials as auth,
     getResourceInfo,
     putResource,
-    install,
+    getResource,
+    ensureTuttleIsInstalled,
     remove,
+    install,
 };

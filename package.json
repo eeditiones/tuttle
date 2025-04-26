@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "gulp",
-    "test": "npm run build && mocha --exit",
-    "test:watch": "mocha --watch",
+    "test": "npm run build && node --test ./test/main.js",
+    "test:watch": "node --test --watch ./test/main.js",
     "build": "gulp xar",
     "deploy": "gulp install",
     "copy": "gulp copyStatic"
@@ -20,12 +20,11 @@
     "@existdb/gulp-exist": "^5.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.4",
     "axios": "^1.7.9",
-    "chai": "^5.2.0",
     "delete": "^1.1.0",
     "gulp": "^5.0.0",
     "gulp-rename": "^2.0.0",
     "gulp-zip": "^6.1.0",
-    "mocha": "^11.1.0"
+    "slimdom": "^4.3.5"
   },
   "private": true,
   "mocha": {

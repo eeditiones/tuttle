@@ -21,11 +21,11 @@ import module namespace collection="http://existsolutions.com/modules/collection
 declare variable $api:definitions := ("api.json");
 
 (:~
- : Post git status 
+ : Post git status
  :)
 declare function api:get-status($request as map(*)) {
     if (contains(request:get-header('Accept'), 'application/json'))
-    then 
+    then
         map {
             'default': config:default-collection(),
             'repos': array {
@@ -66,14 +66,14 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
             let $actions := vcs:get-actions($collection-config?type)
             let $url := $actions?get-url($collection-config)
             let $last-remote-commit := $actions?get-last-commit($collection-config)
-            let $remote-short-sha := app:shorten-sha($last-remote-commit?sha)
+            let $remote-sha := $last-remote-commit?sha
 
             let $status :=
-                if ($remote-short-sha = "")
+                if ($remote-sha = "")
                 then "error"
                 else if (empty($collection-config?deployed))
                 then "new"
-                else if ($collection-config?deployed = $remote-short-sha)
+                else if ($collection-config?deployed = $remote-sha)
                 then "uptodate"
                 else "behind"
 
@@ -84,7 +84,7 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
 
             return map:merge(( $masked, map {
                 'url': $url,
-                'remote': $remote-short-sha,
+                'remote': $remote-sha,
                 'message': $message,
                 'status': $status
             }))
@@ -97,8 +97,8 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
         }
 };
 
-(:~ 
- : Post current hash and remote hash 
+(:~
+ : Post current hash and remote hash
  :)
 declare function api:get-hash($request as map(*)) as map(*) {
     try {
@@ -109,15 +109,15 @@ declare function api:get-hash($request as map(*)) as map(*) {
         let $last-remote-commit := $actions?get-last-commit($collection-config)
 
         return map {
-            "remote-hash": app:shorten-sha($last-remote-commit?sha),
+            "remote-hash": $last-remote-commit?sha,
             "local-hash": $collection-config?deployed,
-            "local-staging-hash": doc($collection-staging)/hash/value/text()
+            "local-staging-hash": doc($collection-staging)/hash/value/string()
         }
     }
     catch * {
         map { "message": $err:description }
     }
-}; 
+};
 
 (:~
 : Remove lockfile
@@ -202,12 +202,11 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
                     $actions?get-last-commit($config)?sha
                 )
 
-            let $write-sha := app:write-sha($staging-collection, $sha)
-
             let $zip := $actions?get-archive($config, $sha)
             let $extract := app:extract-archive($zip, $staging-collection)
 
             let $remove-lock := app:lock-remove($config?collection)
+
             return map {
                 "message" : "success",
                 "hash": $sha,
@@ -216,10 +215,11 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
         )
     }
     catch * {
-        map {
+        let $_ := util:log('error', 'Error occured while deploying ' || $err:description)
+        return map {
             "message": $err:description,
             "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
@@ -234,8 +234,8 @@ declare function api:git-deploy($request as map(*)) as map(*) {
         let $config := api:get-collection-config($request?parameters?collection)
         let $destination := $config?path
         let $lockfile := $config?path || "/" || config:lock()
-        let $staging := $config?path || config:suffix() 
-        
+        let $staging := $config?path || config:suffix()
+
         let $ensure-destination-collection := collection:create($destination)
         return
             if (not(xmldb:collection-available($staging)))
@@ -259,10 +259,10 @@ declare function api:git-deploy($request as map(*)) as map(*) {
                                 return ($undeploy, $remove)
                             )
                             else ()
-                            
+
                         let $xar :=
                             xmldb:store-as-binary(
-                                $staging, "pkg.xar", 
+                                $staging, "pkg.xar",
                                 compression:zip(xs:anyURI($staging), true(), $staging))
 
                         let $install := repo:install-and-deploy-from-db($xar)
@@ -288,15 +288,15 @@ declare function api:git-deploy($request as map(*)) as map(*) {
         map {
             "message": $err:description,
             "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
     }
 };
- 
+
 (:~
- : get commits and comments 
+ : get commits and comments
  :)
 declare function api:get-commits($request as map(*)) as map(*) {
     try {
@@ -310,7 +310,7 @@ declare function api:get-commits($request as map(*)) as map(*) {
     catch * {
         map {
             "message": $err:description,
-            "code": $err:code, "value": $err:value, 
+            "code": $err:code, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module,
             "request": map:remove($request, 'spec')
          }
@@ -318,7 +318,7 @@ declare function api:get-commits($request as map(*)) as map(*) {
 };
 
 (:~
- : get commits and comments 
+ : get commits and comments
  :)
 declare function api:get-commits-default($request as map(*)) as map(*) {
     try {
@@ -332,14 +332,14 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
     catch * {
         map {
             "message": $err:description,
-            "code": $err:code, "value": $err:value, 
+            "code": $err:code, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module,
             "request": map:remove($request, 'spec')
          }
     }
 };
 
-(:~ 
+(:~
  : Trigger incremental update
  :)
 declare function api:incremental($request as map(*)) as map(*) {
@@ -351,7 +351,7 @@ declare function api:incremental($request as map(*)) as map(*) {
         let $extend-str := function ($result as xs:string) {
                 map{ "path": $result }
             }
-        let $extend-arr := function ($result as array(*)) { 
+        let $extend-arr := function ($result as array(*)) {
                 map{
                     "path": $result?1,
                     "success": $result?2,
@@ -368,7 +368,7 @@ declare function api:incremental($request as map(*)) as map(*) {
             )
             else if ($request?parameters?dry) then
                 map {
-                    "changes" : 
+                    "changes" :
                         let $changes := $actions?incremental-dry($config)
                         return map {
                             'new': array:for-each($changes?new, $extend-str),
@@ -383,7 +383,7 @@ declare function api:incremental($request as map(*)) as map(*) {
             else (
                 let $write-lock := app:lock-write($config?path, "incremental")
 
-                let $incremental := 
+                let $incremental :=
                     let $changes := $actions?incremental($config)
                     return map {
                         'new': array:for-each($changes?new, $extend-arr),
@@ -397,7 +397,7 @@ declare function api:incremental($request as map(*)) as map(*) {
                 let $callback := config:get-callback($config)
 
 
-                let $callback-result := 
+                let $callback-result :=
                     if (exists($callback)) then
                         try {
                             map { "result": $callback($config, $incremental), "success": true() }
@@ -406,7 +406,7 @@ declare function api:incremental($request as map(*)) as map(*) {
                                 "result": (),
                                 "success": false(),
                                 "error": map{
-                                    "code": $err:code, 
+                                    "code": $err:code,
                                     "description": $err:description
                                 }
                             }
@@ -447,7 +447,7 @@ declare function api:incremental($request as map(*)) as map(*) {
         map {
             "message": $err:description,
             "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
+                "code": $err:code, "description": $err:description, "value": $err:value,
                 "line": $err:line-number, "column": $err:column-number, "module": $err:module
             }
         }
@@ -470,8 +470,8 @@ declare function api:api-keygen($request as map(*)) as map(*) {
     }
 };
 
-(:~ 
- : Webhook function 
+(:~
+ : Webhook function
  :)
 declare function api:hook($request as map(*)) as map(*) {
     try {
@@ -513,7 +513,7 @@ declare function api:hook($request as map(*)) as map(*) {
 
 
 (:~
- : This is used as an error-handler in the API definition 
+ : This is used as an error-handler in the API definition
  :)
 declare function api:handle-error($error as map(*)) as element(html) {
     <html>
@@ -541,7 +541,7 @@ declare %private function api:get-collection-config($collection as xs:string?) a
         else config:default-collection()
 
     let $collection-config := config:collections($git-collection)
-    
+
     return
         if (empty($git-collection))
         then error((), "git collection not found!")
@@ -554,7 +554,7 @@ declare %private function api:get-collection-config($collection as xs:string?) a
 
 (:~
  : This function "knows" all modules and their functions
- : that are imported here 
+ : that are imported here
  : You can leave it as it is, but it has to be here
  :)
 declare function api:lookup ($name as xs:string) {
