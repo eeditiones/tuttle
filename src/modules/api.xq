@@ -393,11 +393,8 @@ declare function api:incremental($request as map(*)) as map(*) {
                         'ignored': array:for-each($changes?ignored, $extend-str)
                     }
 
-                (: let $new-hash := config:deployed-sha($config?path) :)
-
                 (: run callback if configured :)
                 let $callback := config:get-callback($config)
-
 
                 let $callback-result :=
                     if (exists($callback)) then
