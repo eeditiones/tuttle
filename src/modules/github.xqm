@@ -66,7 +66,7 @@ declare function github:get-last-commit($config as map(*)) as map(*) {
 
     return map {
         "sha" : $commit?sha,
-        "date": $commit?committer?date
+        "date": $commit?commit?committer?date
     }
 };
 
@@ -205,7 +205,7 @@ declare function github:incremental($config as map(*)) {
     let $changes := github:get-changes($config)
     let $del := github:incremental-delete($config, $changes?del)
     let $new := github:incremental-add($config, $changes?new, $sha)
-    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?commit?committer?date)
+    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?date)
     return map {
         'new': array{ $new },
         'del': array{ $del },
