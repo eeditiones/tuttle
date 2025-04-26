@@ -11,4 +11,4 @@ await github();
 await gitlab();
 await tuttle();
 
-//after(() => remove());
+after(() => remove());

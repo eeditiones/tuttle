@@ -195,28 +195,29 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
             let $delete-collection := collection:remove($staging-collection, true())
             let $create-collection := collection:create($staging-collection)
 
-            let $sha :=
+            let $commit :=
                 if (exists($hash)) then (
-                    $hash
+                    $actions?get-specific-commit($config, $hash)
                 ) else (
-                    $actions?get-last-commit($config)?sha
+                    $actions?get-last-commit($config)
                 )
 
-            let $zip := $actions?get-archive($config, $sha)
+            let $zip := $actions?get-archive($config, $commit?sha)
             let $extract := app:extract-archive($zip, $staging-collection)
+            let $_ := app:write-commit-info($staging-collection, $commit)
 
             let $remove-lock := app:lock-remove($config?collection)
 
             return map {
                 "message" : "success",
-                "hash": $sha,
+                "hash": $commit?sha,
                 "collection": $staging-collection
             }
         )
     }
     catch * {
-        let $_ := util:log('error', 'Error occured while deploying ' || $err:description)
-        return map {
+        util:log('error', 'Error occured while deploying ' || $err:description),
+        map {
             "message": $err:description,
             "error": map {
                 "code": $err:code, "description": $err:description, "value": $err:value,
@@ -278,6 +279,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
                 let $remove-staging := collection:remove($staging, true())
                 let $remove-lock := app:lock-remove($destination)
                 let $reindex := xmldb:reindex($destination)
+
                 return map {
                     "hash": config:deployed-sha($destination),
                     "message": "success"
@@ -330,12 +332,12 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
         }
     }
     catch * {
-        map {
+        roaster:response(500, map{
             "message": $err:description,
             "code": $err:code, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module,
             "request": map:remove($request, 'spec')
-         }
+        })
     }
 };
 
@@ -391,11 +393,8 @@ declare function api:incremental($request as map(*)) as map(*) {
                         'ignored': array:for-each($changes?ignored, $extend-str)
                     }
 
-                (: let $new-hash := config:deployed-sha($config?path) :)
-
                 (: run callback if configured :)
                 let $callback := config:get-callback($config)
-
 
                 let $callback-result :=
                     if (exists($callback)) then

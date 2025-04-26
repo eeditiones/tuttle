@@ -27,10 +27,6 @@
     "slimdom": "^4.3.5"
   },
   "private": true,
-  "mocha": {
-    "timeout": 10000,
-    "slow": 1000
-  },
   "app": {
     "author": "TEI-publisher project team",
     "abbrev": "tuttle",

@@ -198,15 +198,15 @@ declare function app:set-permission($collection as xs:string, $resource as xs:st
  : Falls back to gitsha.xml for collections
  : that do not have a repo.xml
  :)
-declare function app:write-commit-info($collection as xs:string, $commit-id as xs:string, $commit-date as xs:string) {
+declare function app:write-commit-info($collection as xs:string, $commit as map(*)) {
     if (doc-available($collection || '/repo.xml')) then (
         let $repoXML := doc($collection || '/repo.xml')//repo:meta
         let $updated :=
             <meta xmlns="http://exist-db.org/xquery/repo">{
                 $repoXML/@* except ($repoXML/@commit-id, $repoXML/@commit-time, $repoXML/@commit-date),
-                attribute commit-id { $commit-id },
-                attribute commit-time { app:iso-to-epoch($commit-date) },
-                attribute commit-date { $commit-date },
+                attribute commit-id { $commit?sha },
+                attribute commit-time { app:iso-to-epoch($commit?date) },
+                attribute commit-date { $commit?date },
                 $repoXML/node()
             }</meta>
         return xmldb:store($collection, "repo.xml", $updated)
@@ -214,8 +214,8 @@ declare function app:write-commit-info($collection as xs:string, $commit-id as x
         (: No repo.xml, write gitsha.xml :)
         let $contents :=
             <hash>
-                <value>{ $commit-id }</value>
-                <date>{ $commit-date }</date>
+                <value>{ $commit?sha }</value>
+                <date>{ $commit?date }</date>
             </hash>
         return xmldb:store($collection, "gitsha.xml", $contents)
     )
