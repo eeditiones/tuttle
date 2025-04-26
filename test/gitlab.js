@@ -10,14 +10,14 @@ export default () =>
         const testHASH = '79789e5';
         const collection = 'tuttle-sample-gitlab';
 
-        await it('Remove lockfile', async function () {
+        it('Remove lockfile', async function () {
             const resultPromise = axios.post(`git/${collection}/lockfile`, {}, { auth });
             await assert.doesNotReject(resultPromise, 'The request should succeed');
             const res = await resultPromise;
             assert.strictEqual(res.status, 200);
         });
 
-        await it('Get changelog', async function () {
+        it('Get changelog', async function () {
             const resultPromise = axios.get(`git/${collection}/commits`, { auth });
             await assert.doesNotReject(resultPromise, 'The request should succeed');
             const res = await resultPromise;
@@ -26,7 +26,7 @@ export default () =>
             assert(res.data.commits.length > 2);
         });
 
-        await it('Pull ' + testHASH + ' into staging collection', async function () {
+        it('Pull ' + testHASH + ' into staging collection', async function () {
             const resultPromise = axios.get(`git/${collection}?hash=${testHASH}`, { auth });
             await assert.doesNotReject(resultPromise, 'The request should succeed');
             const res = await resultPromise;
@@ -39,7 +39,7 @@ export default () =>
             });
         });
 
-        await it('Deploy staging to target collection', async function () {
+        it('Deploy staging to target collection', async function () {
             const resultPromise = axios.post(`git/${collection}`, {}, { auth });
             await assert.doesNotReject(resultPromise, 'The request should succeed');
             const res = await resultPromise;
@@ -47,7 +47,7 @@ export default () =>
             assert.strictEqual(res.data.message, 'success');
         });
 
-        await it('Check Hashes', async function () {
+        it('Check Hashes', async function () {
             const resultPromise = axios.get(`git/${collection}/hash`, { auth });
             await assert.doesNotReject(resultPromise, 'the request should succeed');
             const res = await resultPromise;
@@ -56,25 +56,28 @@ export default () =>
             assert.strictEqual(res.data['local-hash'], testHASH);
         });
 
-        await describe('Incremental update', async function () {
+        describe('Incremental update', async function () {
             let newFiles;
             let delFiles;
 
-            await it('can do a dry run', async function () {
-                const resultPromise = axios.post(
-                    `git/${collection}/incremental?dry=true`,
-                    {},
-                    { auth },
-                );
-                await assert.doesNotReject(resultPromise, 'The request should succeed');
-                const dryRunResponse = await resultPromise;
+            describe('can do a dry run', async function () {
+                let dryRunResponse
+                before(async function () {
+                    const resultPromise = axios.post(
+                        `git/${collection}/incremental?dry=true`,
+                        {},
+                        { auth },
+                    );
+                    await assert.doesNotReject(resultPromise, 'The request should succeed');
+                    dryRunResponse = await resultPromise;
+                })
 
-                await it('Succeeds', function () {
+                it('Succeeds', function () {
                     assert.strictEqual(dryRunResponse.status, 200);
                     assert.strictEqual(dryRunResponse.data.message, 'dry-run');
                 });
 
-                await it('Returns a list of new resources', async function () {
+                it('Returns a list of new resources', async function () {
                     newFiles = await Promise.all(
                         dryRunResponse.data.changes.new.map(async (resource) => {
                             const resourceInfo = await getResourceInfo(
@@ -95,7 +98,7 @@ export default () =>
                     assert(newFiles[2][1] instanceof Date);
                 });
 
-                await it('Returns a list of resources to be deleted', async function () {
+                it('Returns a list of resources to be deleted', async function () {
                     delFiles = dryRunResponse.data.changes.del;
 
                     assert(delFiles.length > 0);
@@ -106,7 +109,7 @@ export default () =>
                 });
             });
 
-            await it('can do a run', async function () {
+            describe('can do a run', async function () {
                 let incrementalUpdateResponse;
                 before(async function () {
                     incrementalUpdateResponse = await axios.post(
@@ -117,12 +120,12 @@ export default () =>
                     // console.log('incrementalUpdateResponse', incrementalUpdateResponse.data)
                 });
 
-                await it('succeeds', function () {
+                it('succeeds', function () {
                     assert.strictEqual(incrementalUpdateResponse.status, 200);
                     assert.strictEqual(incrementalUpdateResponse.data.message, 'success');
                 });
 
-                await it('updates all changed resources', async function () {
+                it('updates all changed resources', async function () {
                     await Promise.all(
                         newFiles.map(async (resource) => {
                             const { modified } = await getResourceInfo(
@@ -134,7 +137,7 @@ export default () =>
                     );
                 });
 
-                await it('deletes all deleted resources', async function () {
+                it('deletes all deleted resources', async function () {
                     await Promise.all(
                         delFiles.map(async (resource) => {
                             const resourceInfo = await getResourceInfo(
