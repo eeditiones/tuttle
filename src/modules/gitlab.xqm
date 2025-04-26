@@ -204,12 +204,12 @@ declare function gitlab:incremental-dry($config as map(*)) as map(*) {
  : Run incremental update on collection
  :)
 declare function gitlab:incremental($config as map(*)) as map(*) {
-    let $last-commit :=    gitlab:get-last-commit($config)
+    let $last-commit := gitlab:get-last-commit($config)
     let $sha := $last-commit?sha
     let $changes := gitlab:get-changes($config)
     let $new := gitlab:incremental-add($config, $changes?new, $sha)
     let $del := gitlab:incremental-delete($config, $changes?del)
-    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?timestamp)
+    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?committed_date)
     return map {
         'new': array{ $new },
         'del': array{ $del },

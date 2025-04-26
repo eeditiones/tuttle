@@ -181,8 +181,7 @@ declare function github:incremental($config as map(*)) {
     let $changes := github:get-changes($config)
     let $del := github:incremental-delete($config, $changes?del)
     let $new := github:incremental-add($config, $changes?new, $sha)
-    let $_ := util:log('info', 'Date: "' || $last-commit?commit?author?date || '"')
-    let $writesha := app:write-commit-info($config?path, $sha, xs:dateTime($last-commit?commit?author?date))
+    let $writesha := app:write-commit-info($config?path, $sha, $last-commit?commit?committer?date)
     return map {
         'new': array{ $new },
         'del': array{ $del },
