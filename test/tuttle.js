@@ -21,11 +21,11 @@ export default () =>
         const defaultCollection = 'tuttle-sample-data';
 
         describe('git/status', async function () {
-            let repos, defaultRepo
+            let res, repos, defaultRepo
             before(async () => {
                 const resultPromise = axios.get('git/status', { auth });
                 await assert.doesNotReject(resultPromise, 'The request should succeed');
-                const res = await resultPromise;
+                res = await resultPromise;
                 repos = res.data.repos;
                 defaultRepo = res.data.default;
             })
@@ -196,7 +196,7 @@ export default () =>
             const repo = new DOMParser().parseFromString(repoXML.toString(), 'text/xml').documentElement;
             assert.ok(repo.getAttribute('commit-id'), 'The commit id should be set');
             assert.ok(repo.getAttribute('commit-time'), 'The commit time should be set');
-            assert.ok(repo.getAttribute('commit-dateTime'), 'The commit dateTime should be set');
+            assert.ok(repo.getAttribute('commit-date'), 'The commit date should be set');
         });
         
     });
