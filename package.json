@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "gulp",
-    "test": "npm run build && node --test ./test/main.js",
+    "test": "npm run build && node --test --test-reporter spec ./test/main.js",
     "test:watch": "node --test --watch ./test/main.js",
     "build": "gulp xar",
     "deploy": "gulp install",
