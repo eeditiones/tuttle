@@ -13,33 +13,49 @@ Synchronizes your data collection with GitHub and GitLab.
 * Deal with multiple repositories
 * Incremental updates
 * Works with private or public repositories
+* Works with self hosted instances
+* Extendable to other git services
 
 ## Requirements
 
--  [node](https://nodejs.org/en/): `v18`
--  [gulp](https://gulpjs.com): `v4.x` (for building)
+-  [node](https://nodejs.org/en/): `v22`
 -  [exist-db](https://www.exist-db.org): `v5.5.1+ < 7.0.0`
 
-## Building and Installation
+## Installation
+
+Pre-built packages are available
+- as [github-releases](https://github.com/eeditiones/tuttle/releases) 
+  ```bash
+  xst package install github-release tuttle --owner eeditiones
+  ```
+
+- and on [exist-db's public package registry](https://exist-db.org/exist/apps/public-repo/packages/tuttle?eXist-db-min-version=5.5.1).
+  ```bash
+  xst package install from-registry tuttle
+  ```
+
+
+## Building from source
 
 Tuttle uses Gulp as its build tool which itself builds on NPM. 
 To initialize the project and load dependencies run
 
-```npm i```
-
-> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in `.existdb.json.`
+```
+npm install
+```
 
 | Run | Description |
 |---------|-------------|
-|```npm run build```|to just build Tuttle. |
-|```npm run deploy```|To build and install Tuttle in one go|
+|```npm run build``` | builds the Tuttle package |
+|```npm run deploy``` | build and install Tuttle in one go |
 
-The resulting xar(s) are found in the root of the project.
+> Note: the `deploy` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be configured (see gulp-exist documentation)
 
 ## Testing
 
-To run the local test suite you need an
-* instance of eXist running on `localhost:8080` and 
+To run the local test suite you need
+
+* an instance of eXist running on `localhost:8080` and 
 * `npm` to be available in your path
 * a GitHub personal access token with read access to public repositories
 * a gitlab personal access token with read access to public repositories
@@ -52,9 +68,13 @@ export tuttle_token_gitlab_sample_data=<GITLAB_PAT>; \
 path/to/startup.sh
 ```
 
-Alternatively, you can modify `/db/apps/tuttle/data/tuttle.xml` _and_ `test/fixtures/alt-tuttle.xml` to include your tokens. But remember to never commit them!
+Alternatively, you can modify `/db/apps/tuttle/data/tuttle.xml` _and_ `test/fixtures/alt-tuttle.xml`, `test/fixtures/alt-repo-xml-tuttle.xml` to include your tokens. But remember to never commit them!
 
-Run tests with ```npm test```
+Run tests with
+
+```
+npm test
+```
 
 ## Configuration
 
@@ -162,19 +182,24 @@ Example configuration for GitLab:
 
 ## Dashboard
 
-The dashboard can trigger a full deployment or an incremental update. 
-Full deployment clones the repository from git and install it as a `.xar` file.
-With incremental update only the changes to the database collection are applied.
+The dashboard lists all configured collections showing the health
+of all of them at a glance.
+Here, you can trigger a full deployment or an incremental update for each collection.
+
+Full deployment clones the repository from git at ref and installs it as a `.xar` file or just moves the staging collection.
+This is a way to get to a known state in case you encounter issues.
+An incremental update only applies those changes to the target collection that happened in the repository after the last synchronization.
 
 > [!NOTE]
 > Tuttle is built to keep track of **data collections**
 
 > [!NOTE]
-> Tuttle is does not run pre- or post install scripts nor change the index configuration on incremental updates!
+> Tuttle does not run pre- or post install scripts nor change the index configuration on incremental updates!
 
-### Lets start
+### Let's start
 
 1) customize the configuration (`data/tuttle.xml`)
+2) login to the dashboard
 2) click on 'full' to trigger a full deployment from git to existdb
 3) now you can update your collection with a click on 'incremental'
 
