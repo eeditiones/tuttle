@@ -531,10 +531,10 @@
                         "description": "GIT status",
                         "content": {
                             "application/xml":{
-                            	"schema": {
+                                "schema": {
                                     "type": "object",
                                     "xml" : {
-                                    	"name" : "tuttle"
+                                        "name" : "tuttle"
                                     },
                                     "properties": {
                                         "default":{
@@ -543,34 +543,34 @@
                                         "repos":{
                                             "type": "object",
                                             "properties": {
-                                            	"repo": {
-                                            		"type": "array",
-                                            		"items": {
-                                            			"type": "object",
-	                                            		"properties": {
-                                            				"type": {
-                                            					"type": "string"
-                                            				},
-                                            				"url": {
-                                            					"type": "string"
-                                        					},
-                                        				 	"ref": {
-                                            					"type": "string"
-                                            				},
-                                        				   	"collection": {
-                                        		   				"type": "string"
-                                        				   	},
-															"status": {
-                                        				 		"type": "string"
-                                    					   	},
+                                                "repo": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string"
+                                                            },
+                                                            "url": {
+                                                                "type": "string"
+                                                            },
+                                                             "ref": {
+                                                                "type": "string"
+                                                            },
+                                                               "collection": {
+                                                                   "type": "string"
+                                                               },
+                                                            "status": {
+                                                                 "type": "string"
+                                                               },
                                                             "message": {
                                                                 "type": "string"
                                                             }
-														} 
-                                            		}
-												}
-											}
-                        	            }
+                                                        } 
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -584,34 +584,34 @@
                                         "repos":{
                                             "type": "object",
                                             "properties": {
-                                            	"repo": {
-                                            		"type": "array",
-                                            		"items": {
-                                            			"type": "object",
-	                                            		"properties": {
-                                            				"type": {
-                                            					"type": "string"
-                                            				},
-                                            				"url": {
-                                            					"type": "string"
-                                        					},
-                                        				 	"ref": {
-                                            					"type": "string"
-                                            				},
-                                        				   	"collection": {
-                                        		   				"type": "string"
+                                                "repo": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string"
                                                             },
-															"status": {
-                                        				 		"type": "string"
-                                    					   	},
+                                                            "url": {
+                                                                "type": "string"
+                                                            },
+                                                             "ref": {
+                                                                "type": "string"
+                                                            },
+                                                               "collection": {
+                                                                   "type": "string"
+                                                            },
+                                                            "status": {
+                                                                 "type": "string"
+                                                               },
                                                             "message": {
                                                                 "type": "string"
                                                             }
-														} 
-                                            		}
-												}
-											}
-                        	            }
+                                                        } 
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
