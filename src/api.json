@@ -191,7 +191,7 @@
                 ],
                 "responses": {
                     "200":{
-                        "description": "JSON dump of request",
+                        "description": "Result of the incremental update",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -200,6 +200,21 @@
                                         "sha" : {
                                             "type" : "string"
                                         },
+                                        "message" : {
+                                            "type" : "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403":{
+                        "description": "Request cannot run",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties" : {
                                         "message" : {
                                             "type" : "string"
                                         }
@@ -231,7 +246,7 @@
                 ],
                 "responses": {
                     "200":{
-                        "description": "result of the update",
+                        "description": "Result of the incremental update of the default collection",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -240,6 +255,21 @@
                                         "sha" : {
                                             "type" : "string"
                                         },
+                                        "message" : {
+                                            "type" : "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403":{
+                        "description": "Request cannot run",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties" : {
                                         "message" : {
                                             "type" : "string"
                                         }

@@ -12,6 +12,7 @@ import module namespace collection="http://existsolutions.com/modules/collection
 declare namespace expath="http://expath.org/ns/pkg";
 
 declare variable $cb:package-descriptor := "expath-pkg.xml";
+declare variable $cb:package-meta-files := ("expath-pkg.xml", "repo.xml", "exist.xml");
 
 declare variable $cb:temp-collection := "/db/system/repo";
 
@@ -72,31 +73,49 @@ declare function cb:changes-array-contains-path($array as array(*), $path as xs:
  : update the version that exist-db reports for this package by
  : "installing" a stub
  :)
-declare function cb:check-version ($collection-config as map(*), $changes as map(*)) {
-    if (cb:changes-array-contains-path($changes?new, $cb:package-descriptor)) then (
-        cb:update-package-version($collection-config?path)
-    ) else ()
+declare function cb:check-version ($collection-config as map(*), $changes as map(*)) as xs:string {
+    if (not(cb:changes-array-contains-path($changes?new, $cb:package-descriptor))) then (
+        "Descriptor unchanged"
+    ) else if (not(doc-available($collection-config?path || "/" || $cb:package-descriptor))) then (
+        error(xs:QName("cb:descriptor-missing"), "Package descriptor does not exist even though it was updated")
+    ) else (
+        let $expath-package-meta := doc($collection-config?path || "/" || $cb:package-descriptor)/expath:package
+        let $new-version := $expath-package-meta/@version/string()
+        let $old-version := cb:installed-version($expath-package-meta/@name)
+
+        return
+            if ($new-version eq $old-version) then (
+                "Version unchanged"
+            ) else if ($old-version) then (
+                (
+                    repo:remove($expath-package-meta/@name),
+                    cb:update-package-version($collection-config?path, $expath-package-meta),
+                    "Updated from " || $old-version || " to " || $new-version
+                )[3]
+            ) else (
+                cb:update-package-version($collection-config?path, $expath-package-meta),
+                "Version set to " || $new-version
+            )
+    )
 };
 
 
-declare function cb:update-package-version ($target-collection as xs:string) {
-    let $path-to-descriptor := $target-collection || "/" || $cb:package-descriptor
-    return
-        if (not(doc-available($path-to-descriptor))) then (
-            "Failure: package descriptor does not exist even though it was updated"
-        ) else (
-            try {
-                let $expath-package-meta := doc($path-to-descriptor)//expath:package
-                let $package-name := $expath-package-meta/@name/string()
-                (: remove package? :)
-                let $stub-name := concat($expath-package-meta/@abbrev, "-", $expath-package-meta/@version, "__stub.xar")
-                let $xar := cb:create-stub-package($target-collection, $stub-name)
-                let $installed := cb:install-stub-package($stub-name)
-                return "updated"
-            } catch * {
-                "Failure: " || $err:description
-            }
-        )
+declare function cb:update-package-version ($target-collection as xs:string, $expath-package-meta as element(expath:package)) {
+    let $package-name := $expath-package-meta/@name/string()
+    let $stub-name := concat($expath-package-meta/@abbrev, "-", $expath-package-meta/@version, "__stub.xar")
+    let $xar := cb:create-stub-package($target-collection, $stub-name)
+    
+    return cb:install-stub-package($stub-name)
+};
+
+declare function cb:installed-version($package-name as xs:string) as xs:string? {
+    if (not($package-name = repo:list())) then (
+    ) else (
+        parse-xml(
+            util:binary-to-string(
+                repo:get-resource($package-name, $cb:package-descriptor)))
+        /expath:package/@version/string()
+    )
 };
 
 declare %private function cb:create-stub-package($collection as xs:string, $filename as xs:string) {
@@ -109,8 +128,7 @@ declare %private function cb:create-stub-package($collection as xs:string, $file
 
 declare %private function cb:resources-to-zip($collection as xs:string) {
     for $resource in (
-        (: $target, needed? :)
-        xmldb:get-child-resources($collection)[. = ("expath-pkg.xml", "repo.xml", "exist.xml") or starts-with(., "icon")]
+        xmldb:get-child-resources($collection)[. = $cb:package-meta-files or starts-with(., "icon")]
     )
     return
         xs:anyURI($collection || "/" || $resource)
