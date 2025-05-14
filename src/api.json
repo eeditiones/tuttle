@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "version": "1.1.1",
+        "version": "1.2.0",
         "title": "Tuttle API",
         "description": "API for Tuttle Git integration"
     },
@@ -51,8 +51,8 @@
                     }
                 ],
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Following hash was pulled into which collection",
                         "content": {
                             "application/json": {
                                 "schema":{
@@ -60,6 +60,30 @@
                                     "properties": {
                                         "message":{
                                             "type": "string"
+                                        },
+                                        "hash": {
+                                            "type": "string"
+                                        },
+                                        "collection": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -85,15 +109,36 @@
                     }
                 ],
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Following hash was deployed",
                         "content": {
                             "application/json": {
                                 "schema":{
                                     "type": "object",
                                     "properties": {
-                                        "hash":{
+                                        "message":{
                                             "type": "string"
+                                        },
+                                        "hash": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object",
+                                    "properties": {
+                                        "message":{
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -105,7 +150,7 @@
         },
         "/git/": {
             "get": {
-                "summary": "Fetch git repo to staging collection",
+                "summary": "Fetch default git repo to staging collection",
                 "x-constraints": {
                     "groups": ["dba"]
                 },
@@ -115,21 +160,45 @@
                         "name": "hash",
                         "in": "query",
                         "required": false,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Following hash was pulled into which collection",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        },
+                                        "hash": {
+                                            "type": "string"
+                                        },
+                                        "collection": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -145,15 +214,36 @@
                 },
                 "operationId": "api:git-deploy",
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Following hash was deployed",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "hash":{
+                                        "message": {
                                             "type": "string"
+                                        },
+                                        "hash": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -175,7 +265,7 @@
                         "name": "collection",
                         "in":  "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     },
@@ -183,14 +273,14 @@
                         "name": "dry",
                         "in":  "query",
                         "required": false,
-                        "schema":{
+                        "schema": {
                             "type": "boolean",
                             "default": false
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "Result of the incremental update",
                         "content": {
                             "application/json": {
@@ -208,7 +298,7 @@
                             }
                         }
                     },
-                    "403":{
+                    "403": {
                         "description": "Request cannot run",
                         "content": {
                             "application/json": {
@@ -217,6 +307,24 @@
                                     "properties" : {
                                         "message" : {
                                             "type" : "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -245,7 +353,7 @@
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "Result of the incremental update of the default collection",
                         "content": {
                             "application/json": {
@@ -263,7 +371,7 @@
                             }
                         }
                     },
-                    "403":{
+                    "403": {
                         "description": "Request cannot run",
                         "content": {
                             "application/json": {
@@ -277,11 +385,29 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         },
-        "/git/{collection}/hash":{
+        "/git/{collection}/hash": {
             "get": {
                 "summary": "Get remote and local hash",
                 "x-constraints": {
@@ -321,6 +447,21 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -334,7 +475,7 @@
                 "operationId": "api:get-hash",
                 "responses": {
                     "200": {
-                        "description": "GIT Hash",
+                        "description": "git hashes",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -350,6 +491,21 @@
                                         "local-staging-hash":{
                                             "type": "string",
                                             "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
                                         }
                                     }
                                 }
@@ -387,11 +543,29 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "GIT commits",
+                        "description": "List of last git commits",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "array"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -411,7 +585,7 @@
                         "name": "count",
                         "in": "query",
                         "required": false,
-                        "schema":{
+                        "schema": {
                             "type": "integer",
                             "default": 20
                         }
@@ -419,11 +593,29 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "GIT commits",
+                        "description": "List of last git commits",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "array"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -447,14 +639,32 @@
                 ],
                 "responses": {
                     "200":{
-                        "description": "JSON dump of request",
+                        "description": "Result of the action",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -469,15 +679,33 @@
                 "summary": "Trigger incremental update via Gitlab/Github",
                 "operationId": "api:hook",
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Result of the action",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -499,7 +727,7 @@
                         "name": "collection",
                         "in":  "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
@@ -509,11 +737,29 @@
                         "description": "APIKey",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "APIKey":{
+                                        "APIKey": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -538,8 +784,26 @@
                                 "schema":{
                                     "type": "object",
                                     "properties": {
-                                        "APIKey":{
+                                        "APIKey": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -549,16 +813,16 @@
                 }
             }
         },
-           "/git/status":{
+        "/git/status": {
             "get": {
-                "summary": "Get Tuttle configuration",
+                "summary": "Get status of all configured collections",
                 "x-constraints": {
                     "groups": ["dba"]
                 },
                 "operationId": "api:get-status",
                 "responses": {
                     "200": {
-                        "description": "GIT status",
+                        "description": "status of all configured collections",
                         "content": {
                             "application/xml":{
                                 "schema": {
@@ -659,21 +923,39 @@
                         "name": "collection",
                         "in":  "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Lockfile removed",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -690,21 +972,39 @@
                         "name": "collection",
                         "in":  "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Lockfile contents",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -719,15 +1019,33 @@
                 "summary": "Remove Lockfile",
                 "operationId": "api:lock-remove",
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Lockfile for the default collection removed",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
@@ -740,15 +1058,33 @@
                 "summary": "Print Lockfile",
                 "operationId": "api:lock-print",
                 "responses": {
-                    "200":{
-                        "description": "JSON dump of request",
+                    "200": {
+                        "description": "Contents of the lockfile of the default collection",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message":{
+                                        "message": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Something went wrong",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "object"
                                         }
                                     }
                                 }
