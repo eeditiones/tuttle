@@ -113,7 +113,7 @@ declare function api:get-hash($request as map(*)) as map(*) {
         }
     }
     catch * {
-        api:catch-api-error("api:get-hash", map {
+        api:catch-error("api:get-hash", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -138,7 +138,7 @@ declare function api:lock-remove($request as map(*)) as map(*) {
         return map { "message": $message }
     }
     catch * {
-        api:catch-api-error("api:lock-remove", map {
+        api:catch-error("api:lock-remove", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -160,7 +160,7 @@ declare function api:lock-print($request as map(*)) as map(*) {
         return map { "message": $message }
     }
     catch * {
-        api:catch-api-error("api:lock-print", map {
+        api:catch-error("api:lock-print", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -225,7 +225,7 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
         )
     }
     catch * {
-        api:catch-api-error("api:git-deploy", map {
+        api:catch-error("api:git-deploy", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -292,7 +292,7 @@ declare function api:git-deploy($request as map(*)) as map(*) {
 
     }
     catch * {
-        api:catch-api-error("api:git-deploy", map {
+        api:catch-error("api:git-deploy", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -312,7 +312,7 @@ declare function api:get-commits($request as map(*)) as map(*) {
         }
     }
     catch * {
-        api:catch-api-error("api:git-commits", map {
+        api:catch-error("api:git-commits", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -332,7 +332,7 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
         }
     }
     catch * {
-        api:catch-api-error("api:git-commits-default", map {
+        api:catch-error("api:git-commits-default", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -440,7 +440,7 @@ declare function api:incremental($request as map(*)) as map(*) {
             )
     }
     catch * {
-        api:catch-api-error("api:incremental", map {
+        api:catch-error("api:incremental", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -459,7 +459,7 @@ declare function api:api-keygen($request as map(*)) as map(*) {
         return map { "APIKey" : $apikey }
     }
     catch * {
-        api:catch-api-error("api:api-keygen", map {
+        api:catch-error("api:api-keygen", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
@@ -503,7 +503,7 @@ declare function api:hook($request as map(*)) as map(*) {
             )
     }
     catch * {
-        api:catch-api-error("api:hook", map {
+        api:catch-error("api:hook", map {
             "code": $err:code, "description": $err:description, "value": $err:value,
             "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
