@@ -184,10 +184,10 @@ export default () =>
             const resultPromise = axios.get('git/status', { auth });
             await assert.doesNotReject(resultPromise);
         
-            const stagingPromise = axios.get(`git/tuttle-sample-data`, {}, { auth });
+            const stagingPromise = axios.get('git/tuttle-sample-data', { auth });
             await assert.doesNotReject(stagingPromise, 'The request should succeed');
-        
-            const deployPromise = axios.post(`git/tuttle-sample-data`, {}, { auth });
+
+            const deployPromise = axios.post('git/tuttle-sample-data', {}, { auth });
             await assert.doesNotReject(deployPromise, 'The request should succeed');
         
             const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');

@@ -4,8 +4,6 @@ declare namespace api="http://exist-db.org/apps/tuttle/api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace roaster="http://e-editiones.org/roaster";
-import module namespace rutil="http://e-editiones.org/roaster/util";
-import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace xmldb="http://exist-db.org/xquery/xmldb";
 import module namespace compression="http://exist-db.org/xquery/compression";
 
@@ -90,7 +88,7 @@ declare function api:collection-info ($collection as xs:string) as map(*) {
             }))
         }
         catch * {
-            map:merge(( $masked, map {
+           map:merge(( $masked, map {
                 'message': $err:description,
                 'status': 'error'
             }))
@@ -115,7 +113,10 @@ declare function api:get-hash($request as map(*)) as map(*) {
         }
     }
     catch * {
-        map { "message": $err:description }
+        api:catch-error("api:get-hash", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -137,7 +138,10 @@ declare function api:lock-remove($request as map(*)) as map(*) {
         return map { "message": $message }
     }
     catch * {
-        map { "message": $err:description }
+        api:catch-error("api:lock-remove", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -156,7 +160,10 @@ declare function api:lock-print($request as map(*)) as map(*) {
         return map { "message": $message }
     }
     catch * {
-        map { "message": $err:description }
+        api:catch-error("api:lock-print", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -184,7 +191,9 @@ declare function api:git-pull-default($request as map(*)) as map(*) {
 declare %private function api:pull($config as map(*), $hash as xs:string?) as map(*) {
     try {
         if (doc-available($config?collection || "/" || config:lock())) then (
-            map { "message" : doc($config?collection || "/" || config:lock())/task/value/text() || " in progress" }
+            roaster:response(403, "application/json", map { 
+                "message" : doc($config?collection || "/" || config:lock())/task/value/text() || " in progress"
+            })
         )
         else (
             let $actions := vcs:get-actions($config?type)
@@ -216,14 +225,10 @@ declare %private function api:pull($config as map(*), $hash as xs:string?) as ma
         )
     }
     catch * {
-        util:log('error', 'Error occured while deploying ' || $err:description),
-        map {
-            "message": $err:description,
-            "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value,
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
+        api:catch-error("api:git-deploy", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -287,13 +292,10 @@ declare function api:git-deploy($request as map(*)) as map(*) {
 
     }
     catch * {
-        map {
-            "message": $err:description,
-            "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value,
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
+        api:catch-error("api:git-deploy", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -310,12 +312,10 @@ declare function api:get-commits($request as map(*)) as map(*) {
         }
     }
     catch * {
-        map {
-            "message": $err:description,
-            "code": $err:code, "value": $err:value,
-            "line": $err:line-number, "column": $err:column-number, "module": $err:module,
-            "request": map:remove($request, 'spec')
-         }
+        api:catch-error("api:git-commits", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -332,11 +332,9 @@ declare function api:get-commits-default($request as map(*)) as map(*) {
         }
     }
     catch * {
-        roaster:response(500, map{
-            "message": $err:description,
-            "code": $err:code, "value": $err:value,
-            "line": $err:line-number, "column": $err:column-number, "module": $err:module,
-            "request": map:remove($request, 'spec')
+        api:catch-error("api:git-commits-default", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
         })
     }
 };
@@ -363,10 +361,10 @@ declare function api:incremental($request as map(*)) as map(*) {
 
         return
             if (not(xmldb:collection-available($config?path))) then (
-                map { "message" : "Destination collection not exist" }
+                roaster:response(403, map { "message" : "Destination collection not exist" })
             )
             else if (empty($config?deployed)) then (
-                map { "message" : "Collection not managed by Tuttle" }
+                roaster:response(403, map { "message" : "Collection not managed by Tuttle" })
             )
             else if ($request?parameters?dry) then
                 map {
@@ -380,7 +378,7 @@ declare function api:incremental($request as map(*)) as map(*) {
                     "message" : "dry-run"
                 }
             else if (doc-available($lockfile)) then (
-                map { "message" : doc($lockfile)/task/value/text() || " in progress" }
+                roaster:response(403, map { "message" : doc($lockfile)/task/value/text() || " in progress" })
             )
             else (
                 let $write-lock := app:lock-write($config?path, "incremental")
@@ -417,13 +415,12 @@ declare function api:incremental($request as map(*)) as map(*) {
                 Each action is an array with [result, success (, error)]
                 :)
                 let $results := ($incremental?new?*, $incremental?del?*, $callback-result)
-                (: let $errors := $results?error :)
                 let $all-errored-operations := filter($results, function ($a) { exists($a?error) })
 
                 (: Q: should the lock be upheld in case of errors? :)
                 return
                     if (exists($all-errored-operations)) then (
-                        error((), "incremental update failed", map {
+                        roaster:response(500, "application/json", map {
                             "hash": config:deployed-sha($config?path),
                             "message": "ended with errors",
                             "changes": $incremental,
@@ -442,14 +439,10 @@ declare function api:incremental($request as map(*)) as map(*) {
             )
     }
     catch * {
-        (: FIXME: change status code if error occurred :)
-        map {
-            "message": $err:description,
-            "error": map {
-                "code": $err:code, "description": $err:description, "value": $err:value,
-                "line": $err:line-number, "column": $err:column-number, "module": $err:module
-            }
-        }
+        api:catch-error("api:incremental", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -465,7 +458,10 @@ declare function api:api-keygen($request as map(*)) as map(*) {
         return map { "APIKey" : $apikey }
     }
     catch * {
-        map { "message": $err:description }
+        api:catch-error("api:api-keygen", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
 
@@ -481,13 +477,13 @@ declare function api:hook($request as map(*)) as map(*) {
 
         return
             if (empty($apikey)) then (
-                map { "message": "apikey does not exist" }
+                roaster:response(403, "application/json", map { "message": "apikey does not exist" })
             )
             else if (doc-available($lockfile)) then (
-                map { "message" : doc($lockfile)/task/value/text() || " in progress" }
+                roaster:response(403, "application/json", map { "message" : doc($lockfile)/task/value/text() || " in progress" })
             )
             else if (not($actions?check-signature($config?collection, $apikey))) then (
-                roaster:response(401, "Unauthorized")
+                roaster:response(401, "application/json", map { "message": "Unauthorized"})
             )
             else (
                 let $collection-destination-sha := $config?path || "/gitsha.xml"
@@ -506,10 +502,12 @@ declare function api:hook($request as map(*)) as map(*) {
             )
     }
     catch * {
-        map { "message": $err:description }
+        api:catch-error("api:hook", map {
+            "code": $err:code, "description": $err:description, "value": $err:value,
+            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+        })
     }
 };
-
 
 (:~
  : This is used as an error-handler in the API definition
@@ -527,6 +525,14 @@ declare function api:handle-error($error as map(*)) as element(html) {
             <p>{$error?description}</p>
         </body>
     </html>
+};
+
+declare %private
+function api:catch-error($function, $error as map(*)) {
+    util:log('error', ($function, ': [', $error?code, '] ', $error?description)),
+    roaster:response(500, "application/json", map {
+        "message": $error?description, "error": $error
+    })
 };
 
 declare %private function api:get-default-collection-config() as map(*)? {

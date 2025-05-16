@@ -137,17 +137,18 @@
                     <fx-setvalue ref="instance('vars')/inprogress"></fx-setvalue>
                     <fx-send submission="config"></fx-send>
                 </fx-action>
-                <!--                <fx-setvalue event="submit-error"></fx-setvalue>-->
+                <fx-action event="submit-error">
+                    <fx-message>Udpate Failed!</fx-message>
+                    <fx-setvalue ref="instance('vars')/inprogress"></fx-setvalue>
+                </fx-action>
             </fx-submission>
 
             <fx-function signature="local:encode($input as xs:string) as xs:string" type="text/javascript">
                 return btoa(encodeURI($input));
             </fx-function>
-
         </fx-model>
 
         <div class="overlay {instance('vars')/loaded} {instance('vars')/inprogress}">
-            <!--            <span class="loader-26"></span>-->
             <div class="wrap-overlay">
                 <img src="images/Git_icon.svg" class="icon git"></img>
                 <div class="arrow">
@@ -176,8 +177,8 @@
                     </fx-trigger>
                 </section>
             </fx-case>
-            <fx-case id="repos">
 
+            <fx-case id="repos">
                 <fx-group>
                     <a class="docs" href="https://eeditiones.github.io/tuttle-doc" target="_blank">Documentation</a>
                     <h2>Git to DB<span class="small">import data from Git into eXist-db</span></h2>
@@ -190,7 +191,7 @@
                                 <span class="repoName"><a href="{@url}" target="_blank">{./@collection}</a></span>
                                 <fx-trigger>
                                     <button>
-                                        <span>full</span>
+                                        <span>Full</span>
                                     </button>
                                     <fx-confirm message="This action might be time-consuming. Do you want to proceed?">
                                         <fx-send submission="fetch"></fx-send>
