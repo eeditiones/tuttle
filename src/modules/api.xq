@@ -421,7 +421,6 @@ declare function api:incremental($request as map(*)) as map(*) {
                 return
                     if (exists($all-errored-operations)) then (
                         roaster:response(500, "application/json", map {
-                            "message": "incremental update failed", 
                             "hash": config:deployed-sha($config?path),
                             "message": "ended with errors",
                             "changes": $incremental,
