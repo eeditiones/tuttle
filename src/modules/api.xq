@@ -551,7 +551,7 @@ declare %private function api:get-collection-config($collection as xs:string?) a
         if (empty($git-collection))
         then error((), "git collection not found!")
         else if (empty($collection-config))
-        then error((), "collection config not found!")
+        then error((), "collection config " || $git-collection || " not found!")
         else $collection-config
 };
 
