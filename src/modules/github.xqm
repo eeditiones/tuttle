@@ -9,6 +9,9 @@ import module namespace config="http://e-editiones.org/tuttle/config" at "config
 
 declare namespace http="http://expath.org/ns/http-client";
 
+declare variable $github:max-page-size := 100;
+declare variable $github:max-total-result-size := 100;
+
 declare function github:repo-url($config as map(*)) as xs:string {
     ``[`{$config?baseurl}`repos/`{$config?owner}`/`{$config?repo}`]``
 };
@@ -74,7 +77,7 @@ declare function github:get-last-commit($config as map(*)) as map(*) {
  : Get all commits
  :)
 declare function github:get-commits($config as map(*)) as array(*)* {
-    github:get-commits($config, 100)
+    github:get-commits($config, $github:max-page-size)
 };
 
 (:~
@@ -107,8 +110,35 @@ declare %private function github:short-commit-info ($commit-info as map(*)) as a
  : Get commits in full
  :)
 declare function github:get-raw-commits($config as map(*), $count as xs:integer) as array(*)? {
-    github:request-json-ignore-pages(
-        github:commit-ref-url($config, $count), $config?token)
+  github:get-raw-commits($config, $count, ())
+};
+
+(:~
+ : Get commits in full, going over pages until we find the commit with the correct hash
+ :)
+declare function github:get-raw-commits (
+  $config as map(*),
+  $count as xs:integer,
+  $stop-at-commit-id as xs:string?
+) as array(*)? {
+  let $stop-condition := if (empty($stop-at-commit-id)) then
+    function ($_) {
+      (: We are not looking for any SHA. Prevent going over all of the commits in a possibly big repo :)
+      true()
+    }
+  else
+    function ($results-on-page) {
+			(: We can stop searching once we have all the commits between 'now' and the commit we looked for :)
+      let $found-commits := $results-on-page?*?sha
+      return $found-commits = $stop-at-commit-id
+    }
+
+  let $results := github:request-json-all-pages(
+    github:commit-ref-url($config, $count),
+    $config?token,
+    $stop-condition
+  )
+  return array { $results?* }
 };
 
 (:~
@@ -116,14 +146,14 @@ declare function github:get-raw-commits($config as map(*), $count as xs:integer)
  :)
 declare function github:get-newest-commits($config as map(*)) as xs:string* {
     let $deployed := $config?deployed
-    let $commits := github:get-raw-commits($config, 100)
+    let $commits := github:get-raw-commits($config, $github:max-page-size, $deployed)
     let $sha := $commits?*?sha
     let $how-many := index-of($sha, $deployed) - 1
     return
         if (empty($how-many)) then (
             error(
                 xs:QName("github:commit-not-found"),
-                'The deployed commit hash ' || $deployed || ' was not found in the list of commits on the remote.')
+                'The deployed commit hash ' || $deployed || ' was not found in the list of commits on the remote. Tuttle can only process incremental upgrades of ' || $github:max-total-result-size || '.')
         ) else (
             reverse(subsequence($sha, 1, $how-many))
         )
@@ -218,7 +248,7 @@ declare function github:incremental($config as map(*)) {
  :)
 declare function github:get-commit-files($config as map(*), $sha as xs:string) as array(*) {
     let $url := github:repo-url($config) || "/commits/"  || $sha
-    let $commit := github:request-json-all-pages($url, $config?token, ())
+    let $commit := github:request-json-all-pages($url, $config?token)
 
     return array { $commit?files?* }
 };
@@ -361,7 +391,32 @@ declare %private function github:request-json($url as xs:string, $token as xs:st
     )
 };
 
-declare %private function github:request-json-all-pages($url as xs:string, $token as xs:string?, $acc) {
+(:~
+ : Get all pages of a specified URL. Github has some paginated endpoints, This function traverses all of
+ : those and joins the results.
+ :)
+declare %private function github:request-json-all-pages($url as xs:string, $token as xs:string?) {
+  github:request-json-all-pages($url, $token, function ($_) { (: Traverse all pages :) false() }, ())
+};
+
+(:~
+ : Overload, adds the $stop-condition callback which is given the contents of the current page
+ : return `true()` to indicate there are sufficient results and we can stop
+ :)
+declare %private function github:request-json-all-pages(
+  $url as xs:string,
+  $token as xs:string?,
+  $stop-condition as function(map(*)) as xs:boolean
+) {
+  github:request-json-all-pages($url, $token, $stop-condition, ())
+};
+
+declare %private function github:request-json-all-pages(
+  $url as xs:string,
+  $token as xs:string?,
+  $stop-condition as function(map(*)) as xs:boolean,
+  $acc
+) {
     let $response :=
         app:request-json(
             github:build-request($url, (
@@ -374,13 +429,16 @@ declare %private function github:request-json-all-pages($url as xs:string, $toke
             github:parse-link-header($response[1]/http:header[@name="link"]/@value)?next
         ) else ()
 
-    let $all := ($acc, $response[2])
+    let $results-in-this-page := $response[2]
+    let $all := ($acc, $results-in-this-page)
+
+    let $should-stop := $stop-condition($results-in-this-page)
 
     return (
-        if (exists($next-url)) then (
-            github:request-json-all-pages($next-url, $token, $all)
+        if (not($should-stop) and count($all?*) < $github:max-total-result-size and exists($next-url)) then (
+           github:request-json-all-pages($next-url, $token, $stop-condition, $all)
         ) else (
-            $all
+          $all
         )
     )
 };
