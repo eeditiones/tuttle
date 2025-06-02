@@ -21,7 +21,7 @@
     "@existdb/gulp-replace-tmpl": "^1.0.4",
     "axios": "^1.9.0",
     "delete": "^1.1.0",
-    "gulp": "^5.0.0",
+    "gulp": "^5.0.1",
     "gulp-rename": "^2.0.0",
     "gulp-zip": "^6.1.0",
     "slimdom": "^4.3.5"
