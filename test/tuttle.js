@@ -110,7 +110,7 @@ export default () =>
                 await assert.doesNotReject(resultPromise, 'The request should succeed');
                 res = await resultPromise;
             })
-            
+
             it('returns status 200', async function () {
                 assert.strictEqual(res.status, 200);
             });
@@ -176,27 +176,62 @@ export default () =>
         it('can also write hashes to repo.xml', async () => {
             await remove();
             await install();
-        
+
             // Set up tuttle with a repo where repo.xml is used to store the git sha info
             const buffer = await readFile('./test/fixtures/alt-repoxml-tuttle.xml');
             await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
-        
+
             const resultPromise = axios.get('git/status', { auth });
             await assert.doesNotReject(resultPromise);
-        
+
             const stagingPromise = axios.get('git/tuttle-sample-data', { auth });
             await assert.doesNotReject(stagingPromise, 'The request should succeed');
 
             const deployPromise = axios.post('git/tuttle-sample-data', {}, { auth });
             await assert.doesNotReject(deployPromise, 'The request should succeed');
-        
+
             const repoXML = await getResource('/db/apps/tuttle-sample-data/repo.xml');
-        
+
             const repo = new DOMParser().parseFromString(repoXML.toString(), 'text/xml').documentElement;
             assert.ok(repo.getAttribute('commit-id'), 'The commit id should be set');
             assert.ok(repo.getAttribute('commit-time'), 'The commit time should be set');
             assert.ok(repo.getAttribute('commit-date'), 'The commit date should be set');
         });
-        
-    });
 
+        describe('large histories', async () => {
+            before(async () => {
+                await remove();
+                await install();
+            });
+
+            await it('can upgrade over a few hundred commits', async () => {
+                // Set up tuttle with a repo with a ton of commits that it can upgrade over
+                const buffer = await readFile('./test/fixtures/alt-big-repo-tuttle.xml');
+                await putResource(buffer, '/db/apps/tuttle/data/tuttle.xml');
+
+                const OLD_HASH = '41188098f120b6e70d1b0c3bb704a422eba43dfa';
+                const stageOldVersionPromise = axios.get(`git/tuttle-sample-data?hash=${OLD_HASH}`, { auth });
+                await assert.doesNotReject(stageOldVersionPromise);
+                const deployOldVersionPromise = axios.post('git/tuttle-sample-data', {}, { auth });
+                await assert.doesNotReject(deployOldVersionPromise, 'The request should succeed');
+
+                const beforeString = await getResource('/db/apps/tuttle-sample-data/data/regular-changing-document.xml');
+
+                const before = new DOMParser().parseFromString(beforeString.toString(), 'text/xml').documentElement;
+                assert.strictEqual(before.textContent, 'Initial version');
+
+                console.log('deployed older version of the sample data on the long-history branch')
+
+                const resultPromise = axios.get('git/status', { auth });
+                await assert.doesNotReject(resultPromise);
+
+                const incrementalPromise = axios.post('git/tuttle-sample-data/incremental', {}, { auth });
+                await assert.doesNotReject(incrementalPromise, 'The incremental request should succeed');
+
+                const afterString = await getResource('/db/apps/tuttle-sample-data/data/regular-changing-document.xml');
+
+                const after = new DOMParser().parseFromString(afterString.toString(), 'text/xml').documentElement;
+                assert.strictEqual(after.textContent, 'change for 200');
+            });
+        });
+    });
