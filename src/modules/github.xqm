@@ -10,7 +10,7 @@ import module namespace config="http://e-editiones.org/tuttle/config" at "config
 declare namespace http="http://expath.org/ns/http-client";
 
 declare variable $github:max-page-size := 100;
-declare variable $github:max-total-result-size := 100;
+declare variable $github:max-total-result-size := 500;
 
 declare function github:repo-url($config as map(*)) as xs:string {
     ``[`{$config?baseurl}`repos/`{$config?owner}`/`{$config?repo}`]``
