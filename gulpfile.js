@@ -53,7 +53,8 @@ function watchTemplates () {
 }
 
 
-const staticFiles = 'src/**/*.{xml,html,xq,xqm,xsl,xconf,json,svg,js,css,png,jpg,map}'
+const staticFiles = 'src/**/*.{xml,html,xq,xqm,xsl,xconf,json,svg,js,css,map}'
+const images = 'src/**/*.{png,jpg}'
 
 /**
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
@@ -62,8 +63,18 @@ function copyStatic () {
     return src(staticFiles).pipe(dest('build'))
 }
 
+/**
+ * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
+ */
+function copyImages () {
+    return src(images, {encoding: false}).pipe(dest('build'))
+}
+
 function watchStatic () {
     watch(staticFiles, series(copyStatic));
+}
+function watchImages () {
+    watch(images, series(copyImages));
 }
 
 /**
@@ -90,7 +101,7 @@ const xarFilename = `${app.abbrev}-${version}.xar`
  * create XAR package in repo root
  */
 function createXar () {
-    return src('build/**/*', {base: 'build/'})
+    return src('build/**/*', {base: 'build/', encoding: false})
         .pipe(zip(xarFilename))
         .pipe(dest('dist'))
 }
@@ -99,7 +110,7 @@ function createXar () {
  * upload and install the latest built XAR
  */
 function installXar () {
-    return src(xarFilename, { cwd:'dist/', encoding: false })
+    return src(xarFilename, {cwd:'dist/', encoding: false})
         .pipe(existClient.install({ packageUri }))
 }
 
@@ -108,11 +119,13 @@ function installXar () {
 const build = series(
     clean,
     templates,
-    copyStatic
+    copyStatic,
+    copyImages
 )
 const deploy = series(build, deployApp)
 const watchAll = parallel(
     watchStatic,
+    watchImages,
     watchTemplates,
     watchBuild
 )
@@ -126,6 +139,8 @@ export {
  watchTemplates,
  copyStatic,
  watchStatic,
+ copyImages,
+ watchImages,
  build,
  deploy,
  xar,
