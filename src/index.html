@@ -89,7 +89,7 @@
             <fx-submission id="fetch"
                            method="get"
                            replace="none"
-                           url="./git/{instance('default')/repos/repo[index('list')]/@collection}"
+                           url="./git/{instance('default')/repos/repo[index('list')]/@collection => encode-for-uri()}"
                            serialization="none">
 
                 <fx-action event="submit">
@@ -109,7 +109,7 @@
                            method="post"
                            replace="instance"
                            instance="response"
-                           url="./git/{instance('default')/repos/repo[index('list')]/@collection}"
+                           url="./git/{instance('default')/repos/repo[index('list')]/@collection => encode-for-uri()}"
                            serialization="none">
 
                 <fx-action event="submit-done">
@@ -122,7 +122,7 @@
             </fx-submission>
 
             <fx-submission id="update"
-                           url="./git/{instance('default')/repos/repo[index('list')]/@collection}/incremental"
+                           url="./git/{instance('default')/repos/repo[index('list')]/@collection => encode-for-uri()}/incremental"
                            replace="instance"
                            instance="response"
                            method="post">
@@ -138,7 +138,7 @@
                     <fx-send submission="config"></fx-send>
                 </fx-action>
                 <fx-action event="submit-error">
-                    <fx-message>Udpate Failed!</fx-message>
+                    <fx-message>Update Failed!</fx-message>
                     <fx-setvalue ref="instance('vars')/inprogress"></fx-setvalue>
                 </fx-action>
             </fx-submission>
