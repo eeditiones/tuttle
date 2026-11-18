@@ -5,3 +5,4 @@ node_modules
 .DS_Store
 *.xar
 src/data/test.xml
+.env.test
