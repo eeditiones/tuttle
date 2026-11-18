@@ -298,7 +298,7 @@ declare function github:get-url($config as map(*)) {
 declare function github:check-signature($collection as xs:string, $apikey as xs:string) as xs:boolean {
     let $signature := request:get-header("X-Hub-Signature-256")
     let $payload := util:binary-to-string(request:get-data())
-    let $private-key := doc(config:apikeys())//apikeys/collection[name = $collection]/key/string()
+    let $private-key := config:apikeys-doc()//apikeys/collection[name = $collection]/key/string()
     let $expected-signature := "sha256=" || crypto:hmac($payload, $private-key, "HmacSha256", "hex")
 
     return $signature = $expected-signature

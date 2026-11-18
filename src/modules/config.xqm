@@ -192,6 +192,17 @@ declare function config:apikeys() as xs:string* {
 };
 
 (:~
+ : The apikeys document, or empty if none was created yet
+ :)
+declare function config:apikeys-doc() as document-node()? {
+    let $path := config:apikeys()
+    return
+        if (doc-available($path))
+        then doc($path)
+        else ()
+};
+
+(:~
  : DB User and Permissions as fallback if "permissions" not set in repo.xml
  :)
 declare function config:sm() as map(*) {
