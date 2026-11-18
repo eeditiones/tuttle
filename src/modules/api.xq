@@ -542,7 +542,7 @@ declare %private function api:get-default-collection-config() as map(*)? {
 declare %private function api:get-collection-config($collection as xs:string?) as map(*)? {
     let $git-collection :=
         if (exists($collection) and $collection ne '')
-        then xmldb:decode-uri($collection)
+        then xmldb:decode-uri(xs:anyURI($collection))
         else config:default-collection()
 
     let $collection-config := config:collections($git-collection)
