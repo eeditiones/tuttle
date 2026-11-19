@@ -19,7 +19,7 @@ Synchronizes your data collection with GitHub and GitLab.
 ## Requirements
 
 -  [node](https://nodejs.org/en/): `v22`
--  [exist-db](https://www.exist-db.org): `v5.5.1+ < 7.0.0`
+-  [exist-db](https://www.exist-db.org): `v5.5.1+` (including `7.0.0` pre-releases and develop snapshots)
 
 ## Installation
 

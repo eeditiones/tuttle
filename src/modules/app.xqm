@@ -107,11 +107,11 @@ declare function app:write-apikey($collection as xs:string, $apikey as xs:string
         let $collection-check := collection:create($collection-prefix)
 
         return
-            if (doc(config:apikeys())//apikeys/collection[name = $collection]/key/text()) then
-                update replace doc(config:apikeys())//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
-            else if (doc(config:apikeys())//apikeys) then
+            if (config:apikeys-doc()//apikeys/collection[name = $collection]/key/text()) then
+                update replace config:apikeys-doc()//apikeys/collection[name = $collection]/key with <key>{$apikey}</key>
+            else if (config:apikeys-doc()//apikeys) then
                 let $add := <collection><name>{$collection}</name><key>{$apikey}</key></collection>
-                return update insert $add into doc(config:apikeys())//apikeys
+                return update insert $add into config:apikeys-doc()//apikeys
             else
                 let $add := <apikeys><collection><name>{$collection}</name><key>{$apikey}</key></collection></apikeys>
                 let $store := xmldb:store($collection-prefix, $apikey-resource, $add)
@@ -223,9 +223,15 @@ declare function app:write-commit-info($collection as xs:string, $commit as map(
 
 declare function app:request-json($request as element(http:request)) as item()+ {
     let $raw := app:request($request)
+    let $body := $raw[2]
     return (
         $raw[1],
-        parse-json(util:base64-decode($raw[2]))
+        (: eXist-db 7 returns JSON bodies as xs:string, earlier versions as binary :)
+        parse-json(
+            if ($body instance of xs:string)
+            then $body
+            else util:base64-decode($body)
+        )
     )
 };
 
@@ -292,5 +298,7 @@ declare function app:add-resource($config as map(*), $filepath as xs:string, $da
 };
 
 declare function app:iso-to-epoch ($commit-time as xs:string) as xs:integer {
-    (xs:dateTime($commit-time) - xs:dateTime('1970-01-01T00:00:00')) div xs:dayTimeDuration('PT1S')
+    xs:integer(
+        (xs:dateTime($commit-time) - xs:dateTime('1970-01-01T00:00:00')) div xs:dayTimeDuration('PT1S')
+    )
 };

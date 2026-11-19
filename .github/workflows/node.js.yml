@@ -16,8 +16,11 @@ jobs:
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
+      # jobs share one GitHub token; running all at once hits the secondary rate limit
+      max-parallel: 2
       matrix:
-        exist-version: [release, 5.5.1]
+        # release currently points to 7.0.0-beta, latest is a snapshot of develop HEAD
+        exist-version: [5.5.1, 6.4.0, release]
         experimental: [false]
         include:
           - exist-version: latest

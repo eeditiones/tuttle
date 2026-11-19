@@ -109,7 +109,10 @@ declare function api:get-hash($request as map(*)) as map(*) {
         return map {
             "remote-hash": $last-remote-commit?sha,
             "local-hash": $collection-config?deployed,
-            "local-staging-hash": doc($collection-staging)/hash/value/string()
+            "local-staging-hash":
+                if (doc-available($collection-staging))
+                then doc($collection-staging)/hash/value/string()
+                else ()
         }
     }
     catch * {
@@ -471,7 +474,7 @@ declare function api:api-keygen($request as map(*)) as map(*) {
 declare function api:hook($request as map(*)) as map(*) {
     try {
         let $config := api:get-collection-config($request?parameters?collection)
-        let $apikey := doc(config:apikeys())//apikeys/collection[name = $config?collection]/key/string()
+        let $apikey := config:apikeys-doc()//apikeys/collection[name = $config?collection]/key/string()
         let $lockfile := $config?path || "/" || config:lock()
         let $actions := vcs:get-actions($config?type)
 
@@ -542,7 +545,7 @@ declare %private function api:get-default-collection-config() as map(*)? {
 declare %private function api:get-collection-config($collection as xs:string?) as map(*)? {
     let $git-collection :=
         if (exists($collection) and $collection ne '')
-        then xmldb:decode-uri($collection)
+        then xmldb:decode-uri(xs:anyURI($collection))
         else config:default-collection()
 
     let $collection-config := config:collections($git-collection)
